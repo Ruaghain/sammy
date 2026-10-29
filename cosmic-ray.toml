@@ -1,0 +1,12 @@
+[cosmic-ray]
+# Every listed path must exist; add "libs" once libs/core/ is created.
+module-path = "agent"
+excluded-modules = ["agent/*/tests/*"]  # unit tests are not code under test
+timeout = 30.0
+test-command = "pytest -x -q tests/acceptance"  # survivors must point at scenario gaps, so unit tests do not count
+
+[cosmic-ray.distributor]
+name = "local"
+
+[cosmic-ray.git-filter]
+branch = "master"

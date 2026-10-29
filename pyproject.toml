@@ -1,0 +1,15 @@
+[tool.uv.workspace]
+members = []
+
+[dependency-groups]
+dev = [
+    "cosmic-ray>=8.7.0",
+    "pytest>=9.1,<9.2",  # pytest-bdd 9.0 breaks on pytest 9.2 (FixtureManager._arg2fixturedefs removed)
+    "pytest-bdd>=9.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "agent"]
+addopts = "--import-mode=importlib"  # agents may share unit-test file names
+pythonpath = ["tests/acceptance"]
+bdd_features_base_dir = "tests/acceptance/features"

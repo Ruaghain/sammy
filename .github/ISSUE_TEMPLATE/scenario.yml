@@ -1,0 +1,25 @@
+name: Scenario
+description: One acceptance scenario (or Examples row) - one branch, one PR. Add as a sub-issue of its Feature.
+title: "[Scenario]: "
+labels: ["scenario"]
+body:
+  - type: textarea
+    id: gherkin
+    attributes:
+      label: Scenario
+      description: Given/When/Then, in the language of the problem domain - no class names, endpoints or SQL.
+      render: gherkin
+      placeholder: |
+        Scenario: ...
+          Given ...
+          When ...
+          Then ...
+    validations:
+      required: true
+  - type: checkboxes
+    id: approval
+    attributes:
+      label: Approval
+      options:
+        - label: Scenario reviewed and approved by a human before implementation
+          required: true
