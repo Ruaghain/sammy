@@ -1,0 +1,21 @@
+name: Task
+description: Non-feature work - scaffolding, tooling, infrastructure, docs.
+title: "[Task]: "
+labels: ["task"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What needs doing and why.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: Checklist of what has to be true for this to be closed.
+      placeholder: |
+        - [ ] ...
+    validations:
+      required: true
