@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r \".tool_input.file_path // empty\"); case \"$f\" in *.feature) echo \"Blocked: the agent never edits .feature files (see Feature flow in CLAUDE.md). Give suggestions in the conversation; the human applies them.\" >&2; exit 2;; esac",
+            "statusMessage": "Checking for .feature file edits"
+          }
+        ]
+      }
+    ]
+  }
+}
