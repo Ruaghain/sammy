@@ -85,9 +85,12 @@ visible to anyone.
 - Task issues follow step 3 too: branch from the issue, set In Progress,
   PR with `Closes #<n>`.
 - Never commit on `master`; it only changes through merged PRs. GitHub
-  branch protection isn't available (private repo, free plan), so
-  `.githooks/pre-commit` rejects commits on `master` locally. Each clone
-  enables it once with `git config core.hooksPath .githooks`.
+  branch protection enforces this (PR required, no force-push or deletion,
+  admins included), and `.githooks/pre-commit` catches it earlier by
+  rejecting commits on `master` locally. Each clone enables the hook once
+  with `git config core.hooksPath .githooks`.
+- Secret scanning with push protection is on: GitHub rejects pushes that
+  contain recognisable keys or tokens.
 
 ## Acceptance-Test-Driven Development (ATDD)
 
