@@ -27,6 +27,21 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   its provider is explicitly set to it and `ANTHROPIC_API_KEY` is present.
 - A local `.env` file is supported for development and is gitignored.
 
+## Public repo: no real household data
+
+This repo is public. Everything committed, plus issue and PR text, is
+visible to anyone.
+- Test data, fixtures, fakes, prompts, examples and docs use made-up values
+  only: never real names of household members, calendar entries, addresses,
+  device names, MAC/IP addresses, hostnames, SSIDs or network topology.
+- Use reserved or obviously fictional values: `192.0.2.0/24`,
+  `198.51.100.0/24` and `203.0.113.0/24` for IPv4, `2001:db8::/32` for IPv6,
+  `example.com` / `*.example` for domains, and invented names.
+- Secrets and real configuration live only in `.env` (gitignored) or the
+  environment, never in code, tests or issue text.
+- If real data is needed to reproduce a problem, anonymise it first, or ask
+  before committing anything.
+
 ## Work tracking (GitHub Issues)
 
 - Every piece of work has an issue, on the "Sammy" GitHub Project board
@@ -70,9 +85,12 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
 - Task issues follow step 3 too: branch from the issue, set In Progress,
   PR with `Closes #<n>`.
 - Never commit on `master`; it only changes through merged PRs. GitHub
-  branch protection isn't available (private repo, free plan), so
-  `.githooks/pre-commit` rejects commits on `master` locally. Each clone
-  enables it once with `git config core.hooksPath .githooks`.
+  branch protection enforces this (PR required, no force-push or deletion,
+  admins included), and `.githooks/pre-commit` catches it earlier by
+  rejecting commits on `master` locally. Each clone enables the hook once
+  with `git config core.hooksPath .githooks`.
+- Secret scanning with push protection is on: GitHub rejects pushes that
+  contain recognisable keys or tokens.
 
 ## Acceptance-Test-Driven Development (ATDD)
 

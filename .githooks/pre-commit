@@ -1,5 +1,5 @@
 #!/bin/sh
-# master only changes through PRs (GitHub branch protection needs Pro on a private repo).
+# master only changes through PRs (enforced by GitHub branch protection); this catches it before the push.
 if [ "$(git symbolic-ref --short -q HEAD)" = "master" ]; then
     echo "pre-commit: don't commit on master - use a spec/<feature-name> branch or one created with 'gh issue develop'." >&2
     exit 1
