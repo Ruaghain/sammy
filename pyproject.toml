@@ -9,7 +9,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "agent"]
+testpaths = ["tests", "agent", "tools"]
 addopts = "--import-mode=importlib"  # agents may share unit-test file names
-pythonpath = ["tests/acceptance"]
+pythonpath = ["tests/acceptance", "tools"]
 bdd_features_base_dir = "tests/acceptance/features"

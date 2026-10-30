@@ -1,0 +1,43 @@
+# Creates the Feature issue and Scenario sub-issues when a spec PR merges a
+# .feature file to master (see "Feature flow" in CLAUDE.md). Create-only and
+# safe to re-run: run it by hand from the Actions tab to fill in anything missing.
+name: Feature issues
+
+on:
+  push:
+    branches: [master]
+    paths: ["tests/acceptance/features/**.feature"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency: feature-issues
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Find changed feature files
+        id: changed
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        run: |
+          files=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" -- 'tests/acceptance/features/*.feature' | tr '\n' ' ')
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+
+      - name: Sync issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          uv run --frozen python tools/sync_feature_issues.py
+          --repo "${{ github.repository }}"
+          --sha "${{ github.sha }}"
+          --changed ${{ steps.changed.outputs.files }}

@@ -54,6 +54,9 @@ tests/acceptance/
   features/           Gherkin .feature files, written in natural language
   steps/              pytest-bdd step definitions
   drivers/            test doubles and the driver the tests talk to Sammy through
+tools/                repo tooling (e.g. creating issues from feature files)
+  tests/              unit tests for the tooling
+.githooks/            git hooks (pre-commit blocks commits on master)
 cosmic-ray.toml       mutation-testing config
 CLAUDE.md             build conventions (ATDD workflow, testing rules)
 ```
@@ -63,10 +66,12 @@ CLAUDE.md             build conventions (ATDD workflow, testing rules)
 Requirements: Python 3.14+ and [uv](https://docs.astral.sh/uv/).
 
 ```sh
+git config core.hooksPath .githooks   # once per clone: blocks commits on master
 uv sync                        # create .venv and install the workspace plus dev tools
 uv run pytest                  # run all tests
 uv run pytest tests/acceptance # acceptance tests only
-uv run pytest agent            # unit tests only
+uv run pytest agent            # agent unit tests only
+uv run pytest tools            # tooling tests only
 ```
 
 To add a new agent, run from the repo root:
