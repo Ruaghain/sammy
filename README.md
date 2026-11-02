@@ -1,6 +1,6 @@
 # Sammy
 
-Sammy is a self-hosted household agent. You talk to a single **orchestrator**, which reads each request and passes it to the specialist agent best placed to handle it. By default every agent uses **local models served by Ollama**, so household data stays on the home network. An agent can **opt in** to a cloud frontier model such as Claude when a task needs more capability than the local models offer.
+Sammy is a self-hosted household agent. You log in and talk to a single **orchestrator**, which reads each request and passes it to the specialist agent best placed to handle it. By default every agent uses **local models served by Ollama**, so household data stays on the home network. An agent can **opt in** to a cloud frontier model such as Claude when a task needs more capability than the local models offer.
 
 > **Status:** early scaffolding. The workspace, test tooling and conventions are in place. No agents are built yet.
 
@@ -20,14 +20,16 @@ Only agents that have been built are listed here.
 
 ```mermaid
 flowchart LR
-    U[You<br/>CLI / web UI] --> O[Orchestrator]
+    U[You<br/>CLI / web UI] -->|after login| O[Orchestrator]
     O -->|routes by message content| A[Specialist agents]
+    O -.->|reads agent descriptions| D[(Database<br/>users, agent registry)]
     O -.-> L[(Ollama VM<br/>local models)]
     A -.-> L
     A -.->|opt-in| F[(Frontier LLM<br/>e.g. Claude)]
 ```
 
-- **LLM-based routing.** The orchestrator gives a local model the user's message and a registry of available agents (name plus description), and asks it to pick one. There are no hand-written keyword rules, so adding an agent means registering it, not editing routing logic.
+- **User login.** People log in before they can talk to Sammy. User accounts are stored in Sammy's database, with passwords kept only as salted hashes.
+- **LLM-based routing.** Each agent's name and description are stored in a database. The orchestrator gives a local model the user's message and these descriptions, and asks it to pick the best agent. There are no hand-written keyword rules, so adding an agent means registering it, not editing routing logic.
 - **One model interface, many backends.** Agents depend on a small `ModelClient` protocol, not on a specific provider. Ollama is the default implementation. A frontier-model client (for example Anthropic's API) implements the same protocol, so switching an agent to the cloud is a configuration change, not a code change.
 - **Model per agent.** Each agent chooses its own model through configuration. For example, a small, fast model can handle routing while a larger one handles heavier tasks.
 - **Local by default.** Cloud models are never used implicitly. An agent uses one only when it is explicitly configured to and an API key is present.
@@ -49,6 +51,8 @@ This is a [uv](https://docs.astral.sh/uv/) workspace with a single shared lockfi
 ```
 agent/<name>/         one package per agent (orchestrator-agent first)
   tests/              that agent's unit tests
+libs/accounts/        users and login (later)
+  tests/              unit tests for accounts
 web/                  from-scratch web UI and server (later)
 tests/acceptance/
   features/           Gherkin .feature files, written in natural language

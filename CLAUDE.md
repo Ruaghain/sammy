@@ -10,6 +10,11 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   check its `requires-python` is `">=3.14"`, then `uv sync`.
 - `libs/core/` - shared contracts only (`Agent` protocol, `ModelClient`
   protocol, model clients). No business logic.
+- `libs/accounts/` - users and login. Not an agent, and it holds business
+  logic, so it doesn't belong in `libs/core/`. Product code: it follows the
+  ATDD loop and is mutation tested. Create it with
+  `uv init --package libs/accounts`, then add `libs` to `testpaths` in
+  `pyproject.toml` and to `module-path` in `cosmic-ray.toml`.
 - `web/` - the eventual from-scratch web UI/server.
 - `tools/` - repo tooling (e.g. the feature-issue sync), unit tested under
   `tools/tests/`. Not product code, so outside the ATDD loop and mutation
@@ -27,13 +32,26 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   its provider is explicitly set to it and `ANTHROPIC_API_KEY` is present.
 - A local `.env` file is supported for development and is gitignored.
 
+## Stored data
+
+- Users and the agent registry live in a database, at the location set by
+  `SAMMY_DATABASE_URL`. Never commit a database file.
+- Each registered agent has a name and a description. The orchestrator gives
+  its model the user's message and these descriptions and asks it to choose
+  the best agent, so routing has no hand-written rules. An agent's model stays
+  in the environment configuration above, not in the registry.
+- Store only a salted hash of each password, made with a dedicated password
+  hashing algorithm. Never log passwords or session tokens.
+- Acceptance tests use a throwaway database, set up through the driver layer.
+
 ## Public repo: no real household data
 
 This repo is public. Everything committed, plus issue and PR text, is
 visible to anyone.
 - Test data, fixtures, fakes, prompts, examples and docs use made-up values
   only: never real names of household members, calendar entries, addresses,
-  device names, MAC/IP addresses, hostnames, SSIDs or network topology.
+  usernames, passwords, device names, MAC/IP addresses, hostnames, SSIDs or
+  network topology.
 - Use reserved or obviously fictional values: `192.0.2.0/24`,
   `198.51.100.0/24` and `203.0.113.0/24` for IPv4, `2001:db8::/32` for IPv6,
   `example.com` / `*.example` for domains, and invented names.
@@ -136,7 +154,8 @@ Every behavioural change goes through this loop, one scenario at a time:
   the driver changes, not the feature files.
 
 ### Unit tests
-- Each agent's unit tests live in `agent/<name>/tests/`. Add them inside-out
+- Each agent's unit tests live in `agent/<name>/tests/`, and those for
+  `libs/accounts/` in `libs/accounts/tests/`. Add them inside-out
   as the acceptance test exposes the need, not speculatively.
 - Unit tests are implementation detail: they can be rewritten or deleted
   during refactoring. The "never weaken" rule applies to `tests/acceptance/`
@@ -146,6 +165,7 @@ Every behavioural change goes through this loop, one scenario at a time:
 - `uv run pytest` - everything.
 - `uv run pytest tests/acceptance` - acceptance tests only.
 - `uv run pytest agent` - agent unit tests only.
+- `uv run pytest libs` - shared library unit tests only (once `libs/` exists).
 - `uv run pytest tools` - tooling tests only.
 
 ### Mutation testing (cosmic-ray)
@@ -172,9 +192,10 @@ Every behavioural change goes through this loop, one scenario at a time:
 - Run the same commands without the `cr-filter-git` step across the whole of
   `agent/` as a periodic gate (nightly CI / pre-release), not per-PR —
   full-suite runs are too slow for the per-commit loop above.
-- Scope: cosmic-ray only covers `agent/` (Python). Add `libs` to
-  `module-path` in `cosmic-ray.toml` once `libs/core/` exists (every listed
-  path must exist). `web/` has no mutation coverage yet — out of scope
+- Scope: cosmic-ray only covers `agent/` (Python) for now. Add `libs` to
+  `module-path` in `cosmic-ray.toml` as soon as the first package under
+  `libs/` exists (every listed path must exist), otherwise login code goes
+  unmutated. `web/` has no mutation coverage yet — out of scope
   until/unless a JS equivalent (Stryker) gets added.
 - New scenarios or `Examples` rows to kill survivors are still acceptance
   tests, so they're proposed in the PR for a human to approve, never added
