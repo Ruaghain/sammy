@@ -36,6 +36,11 @@ def test_each_user_logs_in_as_themselves():
     pass
 
 
+@scenario("user-login.feature", "Logging out leaves everyone else logged in")
+def test_logging_out_leaves_everyone_else_logged_in():
+    pass
+
+
 @given(parsers.parse('I am logged in as "{username}"'))
 def given_i_am_logged_in_as(sammy: SammyDriver, username: str):
     sammy.add_user(username, "correct-horse")
@@ -93,3 +98,23 @@ def i_am_told_my_username_or_password_is_incorrect(sammy: SammyDriver):
 @then("I am asked to log in")
 def i_am_asked_to_log_in(sammy: SammyDriver):
     assert sammy.was_asked_to_log_in()
+
+
+@given(parsers.parse('"{first}" and "{second}" are both logged in'))
+def both_are_logged_in(sammy: SammyDriver, first: str, second: str):
+    sammy.someone_logs_in(first)
+    sammy.someone_logs_in(second)
+    # The step says both are logged in, so confirm Sammy agrees, each as
+    # themselves, before going on.
+    assert sammy.is_logged_in(first)
+    assert sammy.is_logged_in(second)
+
+
+@when(parsers.parse('"{username}" logs out'))
+def someone_logs_out(sammy: SammyDriver, username: str):
+    sammy.someone_logs_out(username)
+
+
+@then(parsers.parse('"{username}" is still logged in'))
+def is_still_logged_in(sammy: SammyDriver, username: str):
+    assert sammy.is_logged_in(username)
