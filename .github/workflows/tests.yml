@@ -1,0 +1,44 @@
+# Runs the tests on every PR and on master: the whole suite against throwaway
+# SQLite databases, and the acceptance suite again against PostgreSQL.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  sqlite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: All tests (SQLite)
+        run: uv run --frozen pytest
+
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          # A disposable server that only exists for this job.
+          POSTGRES_USER: sammy
+          POSTGRES_PASSWORD: sammy-test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sammy"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SAMMY_TEST_DATABASE_URL: postgresql+psycopg://sammy:sammy-test@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Acceptance tests (PostgreSQL)
+        run: uv run --frozen pytest tests/acceptance

@@ -1,14 +1,17 @@
 import secrets
-import sqlite3
-from collections.abc import Iterator
-from contextlib import contextmanager
 from dataclasses import dataclass, field
 from hashlib import sha256
+from pathlib import Path
 
+from alembic import command
+from alembic.config import Config
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
+from sqlalchemy import Engine, create_engine, delete, insert, select
 
-_SQLITE_URL_PREFIX = "sqlite:///"
+from accounts.tables import sessions, users
+
+_MIGRATIONS = Path(__file__).parent / "migrations"
 
 
 @dataclass(frozen=True)
@@ -26,79 +29,71 @@ class LoginRefused(Exception):
 
 class Accounts:
     def __init__(self, database_url: str):
-        if not database_url.startswith(_SQLITE_URL_PREFIX):
-            raise ValueError(f"Expected a {_SQLITE_URL_PREFIX} database URL")
-        self._database_path = database_url.removeprefix(_SQLITE_URL_PREFIX)
+        """database_url is a SQLAlchemy URL: sqlite:///path/to/sammy.sqlite or
+        postgresql+psycopg://user:password@host/database. The schema is
+        brought up to date on start."""
+        self._engine = create_engine(database_url)
+        _migrate(self._engine)
         # Argon2id with a random salt per hash; the salt and parameters are
         # stored inside the hash string itself.
         self._password_hasher = PasswordHasher()
         # The hash of a random password nobody knows, made with the same
         # parameters as real ones.
         self._unknown_user_hash = self._password_hasher.hash(secrets.token_urlsafe(32))
-        with self._database() as database:
-            database.execute(
-                "CREATE TABLE IF NOT EXISTS users ("
-                " username TEXT PRIMARY KEY,"
-                " password_hash TEXT NOT NULL)"
-            )
-            database.execute(
-                "CREATE TABLE IF NOT EXISTS sessions ("
-                " token_hash TEXT PRIMARY KEY,"
-                " username TEXT NOT NULL REFERENCES users (username))"
-            )
 
     def create_user(self, username: str, password: str) -> None:
-        with self._database() as database:
+        with self._engine.begin() as database:
             database.execute(
-                "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                (username, self._password_hasher.hash(password)),
+                insert(users).values(
+                    username=username,
+                    password_hash=self._password_hasher.hash(password),
+                )
             )
 
     def log_in(self, username: str, password: str) -> Session:
-        with self._database() as database:
-            user = database.execute(
-                "SELECT password_hash FROM users WHERE username = ?", (username,)
-            ).fetchone()
+        with self._engine.connect() as database:
+            stored_hash = database.execute(
+                select(users.c.password_hash).where(users.c.username == username)
+            ).scalar_one_or_none()
         # An unknown username is still checked against a stand-in hash, so it
         # takes as long to refuse as a wrong password and the response time
         # doesn't reveal which usernames exist.
-        password_hash = user[0] if user else self._unknown_user_hash
+        password_hash = stored_hash if stored_hash is not None else self._unknown_user_hash
         try:
             self._password_hasher.verify(password_hash, password)
         except VerifyMismatchError:
             raise LoginRefused from None
-        if user is None:
+        if stored_hash is None:
             raise LoginRefused
         session = Session(secrets.token_urlsafe(32))
-        with self._database() as database:
+        with self._engine.begin() as database:
             database.execute(
-                "INSERT INTO sessions (token_hash, username) VALUES (?, ?)",
-                (_token_hash(session), username),
+                insert(sessions).values(token_hash=_token_hash(session), username=username)
             )
         return session
 
     def user_for(self, session: Session) -> str | None:
         """The user a session belongs to, or None once it has been logged out."""
-        with self._database() as database:
-            row = database.execute(
-                "SELECT username FROM sessions WHERE token_hash = ?",
-                (_token_hash(session),),
-            ).fetchone()
-        return row[0] if row else None
+        with self._engine.connect() as database:
+            return database.execute(
+                select(sessions.c.username).where(
+                    sessions.c.token_hash == _token_hash(session)
+                )
+            ).scalar_one_or_none()
 
     def log_out(self, session: Session) -> None:
-        with self._database() as database:
+        with self._engine.begin() as database:
             database.execute(
-                "DELETE FROM sessions WHERE token_hash = ?", (_token_hash(session),)
+                delete(sessions).where(sessions.c.token_hash == _token_hash(session))
             )
 
-    @contextmanager
-    def _database(self) -> Iterator[sqlite3.Connection]:
-        connection = sqlite3.connect(self._database_path, autocommit=True)
-        try:
-            yield connection
-        finally:
-            connection.close()
+
+def _migrate(engine: Engine) -> None:
+    config = Config()
+    config.set_main_option("script_location", str(_MIGRATIONS))
+    with engine.begin() as connection:
+        config.attributes["connection"] = connection
+        command.upgrade(config, "head")
 
 
 def _token_hash(session: Session) -> str:

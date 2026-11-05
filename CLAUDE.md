@@ -35,14 +35,28 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
 ## Stored data
 
 - Users and the agent registry live in a database, at the location set by
-  `SAMMY_DATABASE_URL`. Never commit a database file.
+  `SAMMY_DATABASE_URL`. Never commit a database file. Both SQLite and
+  PostgreSQL are supported, through SQLAlchemy Core:
+  - `sqlite:///path/to/sammy.sqlite`
+  - `postgresql+psycopg://user:password@host/database`
+- Write queries with SQLAlchemy Core so they run unchanged on both. Nothing
+  may be specific to one database.
+- The schema is created and changed only by Alembic migrations, which Sammy
+  applies itself when it starts. Accounts keeps its migrations in
+  `libs/accounts/src/accounts/migrations/` and its tables in
+  `accounts/tables.py`; a change to one needs the other, and a unit test
+  fails if they drift apart. Add a migration with
+  `SAMMY_DATABASE_URL=sqlite:///scratch.sqlite uv run alembic -c libs/accounts/alembic.ini revision -m "<change>"`.
 - Each registered agent has a name and a description. The orchestrator gives
   its model the user's message and these descriptions and asks it to choose
   the best agent, so routing has no hand-written rules. An agent's model stays
   in the environment configuration above, not in the registry.
 - Store only a salted hash of each password, made with a dedicated password
   hashing algorithm. Never log passwords or session tokens.
-- Acceptance tests use a throwaway database, set up through the driver layer.
+- Acceptance tests use a throwaway database, set up through the driver layer
+  (`tests/acceptance/drivers/database.py`): a new SQLite file per scenario,
+  or a fresh PostgreSQL database per scenario when `SAMMY_TEST_DATABASE_URL`
+  is set (see Running tests).
 
 ## Public repo: no real household data
 
@@ -169,8 +183,18 @@ Every behavioural change goes through this loop, one scenario at a time:
 - `uv run pytest` - everything.
 - `uv run pytest tests/acceptance` - acceptance tests only.
 - `uv run pytest agent` - agent unit tests only.
-- `uv run pytest libs` - shared library unit tests only (once `libs/` exists).
+- `uv run pytest libs` - shared library unit tests only.
 - `uv run pytest tools` - tooling tests only.
+- Against PostgreSQL: set `SAMMY_TEST_DATABASE_URL` to a server the tests may
+  create and drop databases on, then run the acceptance tests. Locally:
+  ```
+  podman run -d --rm --name sammy-test-postgres -e POSTGRES_USER=sammy \
+    -e POSTGRES_PASSWORD=sammy-test -p 127.0.0.1:55432:5432 docker.io/library/postgres:17
+  SAMMY_TEST_DATABASE_URL=postgresql+psycopg://sammy:sammy-test@127.0.0.1:55432/postgres \
+    uv run pytest tests/acceptance
+  ```
+- CI (`.github/workflows/tests.yml`) runs every test on SQLite and the
+  acceptance tests on PostgreSQL, for each PR and push to `master`.
 
 ### Mutation testing (cosmic-ray)
 - Config lives in `cosmic-ray.toml` at the repo root; it mutates everything
