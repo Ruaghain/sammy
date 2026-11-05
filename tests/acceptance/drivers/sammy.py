@@ -6,16 +6,15 @@ library and the orchestrator directly. When a front end exists, only this
 file changes.
 """
 
-from pathlib import Path
-
 from accounts import Accounts, LoginRefused, Session
 from orchestrator_agent import LoginRequired, Orchestrator
 
 
 class SammyDriver:
-    def __init__(self, database_dir: Path):
-        # A throwaway database per scenario, so scenarios can't affect each other.
-        self._accounts = Accounts(f"sqlite:///{database_dir / 'sammy.sqlite'}")
+    def __init__(self, database_url: str):
+        # A throwaway database per scenario (see drivers/database.py), so
+        # scenarios can't affect each other.
+        self._accounts = Accounts(database_url)
         self._orchestrator = Orchestrator(self._accounts)
         self._session: Session | None = None
         self._login_refused = False

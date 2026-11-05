@@ -29,6 +29,7 @@ flowchart LR
 ```
 
 - **User login.** People log in before they can talk to Sammy. User accounts are stored in Sammy's database, with passwords kept only as salted hashes.
+- **SQLite or PostgreSQL.** `SAMMY_DATABASE_URL` chooses the database: a local SQLite file (`sqlite:///path/to/sammy.sqlite`) or an existing PostgreSQL server (`postgresql+psycopg://user:password@host/database`). Sammy creates and updates its tables itself when it starts.
 - **LLM-based routing.** Each agent's name and description are stored in a database. The orchestrator gives a local model the user's message and these descriptions, and asks it to pick the best agent. There are no hand-written keyword rules, so adding an agent means registering it, not editing routing logic.
 - **One model interface, many backends.** Agents depend on a small `ModelClient` protocol, not on a specific provider. Ollama is the default implementation. A frontier-model client (for example Anthropic's API) implements the same protocol, so switching an agent to the cloud is a configuration change, not a code change.
 - **Model per agent.** Each agent chooses its own model through configuration. For example, a small, fast model can handle routing while a larger one handles heavier tasks.
@@ -75,8 +76,20 @@ uv sync                        # create .venv and install the workspace plus dev
 uv run pytest                  # run all tests
 uv run pytest tests/acceptance # acceptance tests only
 uv run pytest agent            # agent unit tests only
+uv run pytest libs             # shared library unit tests only
 uv run pytest tools            # tooling tests only
 ```
+
+The tests use throwaway SQLite databases. To run the acceptance tests against PostgreSQL as well, start a disposable server and point `SAMMY_TEST_DATABASE_URL` at it:
+
+```sh
+podman run -d --rm --name sammy-test-postgres -e POSTGRES_USER=sammy \
+  -e POSTGRES_PASSWORD=sammy-test -p 127.0.0.1:55432:5432 docker.io/library/postgres:17
+SAMMY_TEST_DATABASE_URL=postgresql+psycopg://sammy:sammy-test@127.0.0.1:55432/postgres \
+  uv run pytest tests/acceptance
+```
+
+CI runs both on every pull request.
 
 To add a new agent, run from the repo root:
 

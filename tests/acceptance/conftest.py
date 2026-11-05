@@ -1,5 +1,6 @@
 import pytest
 
+from drivers.database import throwaway_database
 from drivers.sammy import SammyDriver
 
 
@@ -30,5 +31,6 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture
-def sammy(tmp_path) -> SammyDriver:
-    return SammyDriver(tmp_path)
+def sammy(tmp_path):
+    with throwaway_database(tmp_path) as database_url:
+        yield SammyDriver(database_url)
