@@ -13,6 +13,7 @@ def test_logging_in_with_valid_details():
     {"username": "test.user", "password": "wrong-password"},
     {"username": "unknown.user", "password": "correct-horse"},
     {"username": "test.user", "password": "Correct-Horse"},
+    {"username": "test.user", "password": ""},
 )
 @scenario("user-login.feature", "Login is refused without revealing which detail was wrong")
 def test_login_is_refused_without_revealing_which_detail_was_wrong():
@@ -24,7 +25,9 @@ def a_user_with_the_password(sammy: SammyDriver, username: str, password: str):
     sammy.add_user(username, password)
 
 
-@when(parsers.parse('I log in as "{username}" with the password "{password}"'))
+# A regex rather than parsers.parse, whose "{password}" can't match an empty
+# password.
+@when(parsers.re(r'I log in as "(?P<username>[^"]+)" with the password "(?P<password>[^"]*)"'))
 def i_log_in(sammy: SammyDriver, username: str, password: str):
     sammy.log_in(username, password)
 
