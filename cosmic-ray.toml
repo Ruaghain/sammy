@@ -1,7 +1,14 @@
 [cosmic-ray]
 # Every listed path must exist.
 module-path = ["agent", "libs"]
-excluded-modules = ["agent/*/tests/*", "libs/*/tests/*"]  # unit tests are not code under test
+excluded-modules = [
+    "agent/*/tests/*",  # unit tests are not code under test
+    "libs/*/tests/*",
+    # Table definitions only describe the schema for building queries; the
+    # migrations create it, and a unit test pins the two together. Mutating
+    # these changes nothing at runtime.
+    "libs/*/src/*/tables.py",
+]
 timeout = 30.0
 test-command = "pytest -x -q tests/acceptance"  # survivors must point at scenario gaps, so unit tests do not count
 
@@ -10,3 +17,9 @@ name = "local"
 
 [cosmic-ray.git-filter]
 branch = "master"
+
+# Applied by cr-filter-operators. Mutating `|` into another operator survives
+# on every `X | None` type hint, because Python 3.14 never evaluates
+# annotations at runtime. The code rarely uses `|` for anything else.
+[cosmic-ray.filters.operators-filter]
+exclude-operators = ["core/ReplaceBinaryOperator_BitOr_.*"]

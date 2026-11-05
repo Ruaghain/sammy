@@ -207,9 +207,21 @@ Every behavioural change goes through this loop, one scenario at a time:
   ```
   uv run cosmic-ray init cosmic-ray.toml session.sqlite --force
   uv run cr-filter-git --config cosmic-ray.toml session.sqlite
+  uv run cr-filter-operators session.sqlite cosmic-ray.toml
   uv run cosmic-ray exec cosmic-ray.toml session.sqlite
   uv run cr-report session.sqlite
   ```
+  `cr-filter-git` ignores untracked files, so `git add` new files first or
+  their mutants are all skipped.
+- Two known-equivalent kinds of mutant are left out, so the survivors that
+  remain are worth reading (both set in `cosmic-ray.toml`):
+  - Turning `|` into another operator: on an `X | None` type hint it changes
+    nothing, because Python 3.14 never evaluates annotations at runtime.
+    `cr-filter-operators` skips these. The code rarely uses `|` for anything
+    else; if it starts to, revisit this.
+  - `libs/*/src/*/tables.py`: table definitions only describe the schema for
+    building queries. The migrations create the schema, and a unit test
+    keeps the two in step, so mutating them changes nothing at runtime.
 - A surviving mutant means the acceptance scenario has a gap, not that the
   implementation needs hardening. Fix it by adding a scenario or `Examples`
   row that would catch it — don't chase the mutation score by tweaking code.
