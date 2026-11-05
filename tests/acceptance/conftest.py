@@ -33,4 +33,8 @@ def pytest_collection_modifyitems(config, items):
 @pytest.fixture
 def sammy(tmp_path):
     with throwaway_database(tmp_path) as database_url:
-        yield SammyDriver(database_url)
+        driver = SammyDriver(database_url)
+        try:
+            yield driver
+        finally:
+            driver.close()

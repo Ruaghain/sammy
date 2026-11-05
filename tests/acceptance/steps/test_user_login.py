@@ -58,13 +58,6 @@ def i_am_asked_to_log_in_when_i_send_sammy_a_message(sammy: SammyDriver):
     assert sammy.was_asked_to_log_in()
 
 
-@given(parsers.parse('a user "{username}" with the password "{password}"'))
-def a_user_with_the_password(sammy: SammyDriver, username: str, password: str):
-    sammy.add_user(username, password)
-
-
-# A regex rather than parsers.parse, whose "{password}" can't match an empty
-# password.
 @given("I am not logged in")
 def given_i_am_not_logged_in(sammy: SammyDriver):
     sammy.ensure_logged_out()
@@ -73,11 +66,6 @@ def given_i_am_not_logged_in(sammy: SammyDriver):
 @when("I send Sammy a message")
 def i_send_sammy_a_message(sammy: SammyDriver):
     sammy.send_message("What's on the calendar today?")
-
-
-@when(parsers.re(r'I log in as "(?P<username>[^"]+)" with the password "(?P<password>[^"]*)"'))
-def i_log_in(sammy: SammyDriver, username: str, password: str):
-    sammy.log_in(username, password)
 
 
 @then(parsers.parse('I am logged in as "{username}"'))
