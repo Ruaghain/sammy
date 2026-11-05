@@ -6,14 +6,21 @@ library and the orchestrator directly. When a front end exists, only this
 file changes.
 """
 
+import logging
+
+from sqlalchemy import MetaData, create_engine, select
+
 from accounts import Accounts, LoginRefused, Session
 from orchestrator_agent import LoginRequired, Orchestrator
 
 
 class SammyDriver:
     def __init__(self, database_url: str):
+        # Everything Sammy logs during the scenario, at every level.
+        self._log = _LogRecorder()
         # A throwaway database per scenario (see drivers/database.py), so
         # scenarios can't affect each other.
+        self._database_url = database_url
         self._accounts = Accounts(database_url)
         self._orchestrator = Orchestrator(self._accounts)
         self._session: Session | None = None
@@ -59,6 +66,27 @@ class SammyDriver:
         except LoginRequired:
             self._asked_to_log_in = True
 
+    def everything_recorded(self) -> str:
+        """Everything Sammy has written down: every value in every table of its
+        database, and every log record, as one block of text to search."""
+        engine = create_engine(self._database_url)
+        try:
+            tables = MetaData()
+            tables.reflect(engine)
+            with engine.connect() as database:
+                values = [
+                    str(value)
+                    for table in tables.sorted_tables
+                    for row in database.execute(select(table))
+                    for value in row
+                ]
+        finally:
+            engine.dispose()
+        return "\n".join(values + self._log.lines())
+
+    def close(self) -> None:
+        self._log.stop()
+
     def logged_in_user(self) -> str | None:
         return self._accounts.user_for(self._session) if self._session else None
 
@@ -67,3 +95,31 @@ class SammyDriver:
 
     def was_asked_to_log_in(self) -> bool:
         return self._asked_to_log_in
+
+
+class _LogRecorder(logging.Handler):
+    """Captures every log record from any logger while it's installed, except
+    the test tooling's own. Libraries Sammy uses (SQLAlchemy, Alembic,
+    psycopg, ...) still count: if they log a secret, Sammy has recorded it."""
+
+    _TEST_TOOLING = ("pytest_bdd", "_pytest", "pytest")
+
+    def __init__(self):
+        super().__init__(level=logging.NOTSET)
+        self._records: list[logging.LogRecord] = []
+        self._root = logging.getLogger()
+        self._previous_level = self._root.level
+        self._root.addHandler(self)
+        self._root.setLevel(logging.NOTSET)
+
+    def emit(self, record: logging.LogRecord) -> None:
+        if record.name.split(".")[0] not in self._TEST_TOOLING:
+            self._records.append(record)
+
+    def lines(self) -> list[str]:
+        formatter = logging.Formatter("%(name)s %(levelname)s %(message)s")
+        return [formatter.format(record) for record in self._records]
+
+    def stop(self) -> None:
+        self._root.removeHandler(self)
+        self._root.setLevel(self._previous_level)

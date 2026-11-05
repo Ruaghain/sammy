@@ -162,6 +162,10 @@ Every behavioural change goes through this loop, one scenario at a time:
   (paths relative to `features/`), added in that scenario's PR. Never use
   `scenarios("<name>.feature")`: it binds every scenario in the file, so
   ones not yet built would fail on `master`. Unbound scenarios are ignored.
+- A step used by more than one feature goes in
+  `tests/acceptance/steps/conftest.py`; a step used by one feature stays in
+  that feature's `test_<name>.py`. Importing a step function into another
+  file does not register it.
 - `@scenario` on a `Scenario Outline` binds every `Examples` row, so also
   list the rows built so far with `@pytest.mark.built_examples({...}, ...)`
   (one dict of column values per row); `tests/acceptance/conftest.py`
