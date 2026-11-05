@@ -148,6 +148,10 @@ Every behavioural change goes through this loop, one scenario at a time:
   (paths relative to `features/`), added in that scenario's PR. Never use
   `scenarios("<name>.feature")`: it binds every scenario in the file, so
   ones not yet built would fail on `master`. Unbound scenarios are ignored.
+- `@scenario` on a `Scenario Outline` binds every `Examples` row, so also
+  list the rows built so far with `@pytest.mark.built_examples({...}, ...)`
+  (one dict of column values per row); `tests/acceptance/conftest.py`
+  deselects the rest. Each row's PR adds its dict to the list.
 - `tests/acceptance/drivers/` - the driver the steps talk to Sammy through,
   plus fakes such as the fake `ModelClient`. Import as `drivers.<module>`.
   The driver is the one seam: if the interface moves from CLI to web, only
