@@ -1,6 +1,7 @@
 [tool.uv.workspace]
 members = [
     "libs/accounts",
+    "agent/orchestrator-agent",
 ]
 
 [dependency-groups]
