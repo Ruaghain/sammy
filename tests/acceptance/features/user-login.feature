@@ -33,3 +33,14 @@ Feature: User login
     When I log out
     Then I am not logged in
     And I am asked to log in when I send Sammy a message
+
+  Scenario: Each user logs in as themselves
+    Given a user "test.user" with the password "correct-horse"
+    And a user "test.other" with the password "battery-staple"
+    When I log in as "test.other" with the password "battery-staple"
+    Then I am logged in as "test.other"
+
+  Scenario: Logging out leaves everyone else logged in
+    Given "test.user" and "test.other" are both logged in
+    When "test.user" logs out
+    Then "test.other" is still logged in
