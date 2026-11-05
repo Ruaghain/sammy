@@ -19,6 +19,9 @@ class SammyDriver:
         self._session: Session | None = None
         self._login_refused = False
         self._asked_to_log_in = False
+        # Sessions of other people, by username, for scenarios with several
+        # people logged in at once.
+        self._sessions_by_user: dict[str, Session] = {}
 
     def add_user(self, username: str, password: str) -> None:
         self._accounts.create_user(username, password)
@@ -35,6 +38,16 @@ class SammyDriver:
         # The session is deliberately kept, like a stale cookie or a copied
         # token, so the checks that follow show Sammy itself has forgotten it.
         self._accounts.log_out(self._session)
+
+    def someone_logs_in(self, username: str) -> None:
+        self.add_user(username, "correct-horse")
+        self._sessions_by_user[username] = self._accounts.log_in(username, "correct-horse")
+
+    def someone_logs_out(self, username: str) -> None:
+        self._accounts.log_out(self._sessions_by_user[username])
+
+    def is_logged_in(self, username: str) -> bool:
+        return self._accounts.user_for(self._sessions_by_user[username]) == username
 
     def ensure_logged_out(self) -> None:
         self._session = None
