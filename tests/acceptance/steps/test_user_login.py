@@ -14,6 +14,7 @@ def test_logging_in_with_valid_details():
     {"username": "unknown.user", "password": "correct-horse"},
     {"username": "test.user", "password": "Correct-Horse"},
     {"username": "test.user", "password": ""},
+    {"username": "test.user", "password": "battery-staple"},
 )
 @scenario("user-login.feature", "Login is refused without revealing which detail was wrong")
 def test_login_is_refused_without_revealing_which_detail_was_wrong():
