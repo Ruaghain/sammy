@@ -5,6 +5,7 @@ requires-python = ">=3.14"
 [manifest]
 members = [
     "accounts",
+    "orchestrator-agent",
 ]
 
 [manifest.dependency-groups]
@@ -640,6 +641,17 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/7b/80/37d26f26d20b937344cfd68d9a1f57d8bc4f64adae416fc6828a7f8c8a10/multidict-7.2.1-cp315-cp315t-win_arm64.whl", hash = "sha256:4d61be3725016ef5db3543c95f1f062d7d150ba776582d959a982af88e75fa55", size = 98863, upload-time = "2026-10-24T20:40:59.146Z" },
     { url = "https://files.pythonhosted.org/packages/9d/96/1aaad0e5df33f1f5af21775c411349c0234a6edd581ea403bc81919a6eab/multidict-7.2.1-py3-none-any.whl", hash = "sha256:08ea94663d9e7c25d14d78222f7aee906c472d4837766bec62477c38f6e419dc", size = 28145, upload-time = "2026-10-24T20:40:59.159Z" },
 ]
+
+[[package]]
+name = "orchestrator-agent"
+version = "0.1.0"
+source = { editable = "agent/orchestrator-agent" }
+dependencies = [
+    { name = "accounts" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "accounts", editable = "libs/accounts" }]
 
 [[package]]
 name = "packaging"
