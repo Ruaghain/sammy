@@ -11,6 +11,7 @@ def test_logging_in_with_valid_details():
 
 @pytest.mark.built_examples(
     {"username": "test.user", "password": "wrong-password"},
+    {"username": "unknown.user", "password": "correct-horse"},
 )
 @scenario("user-login.feature", "Login is refused without revealing which detail was wrong")
 def test_login_is_refused_without_revealing_which_detail_was_wrong():

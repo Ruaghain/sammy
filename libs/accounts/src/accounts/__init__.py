@@ -1,3 +1,4 @@
+import secrets
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -27,6 +28,9 @@ class Accounts:
         # Argon2id with a random salt per hash; the salt and parameters are
         # stored inside the hash string itself.
         self._password_hasher = PasswordHasher()
+        # The hash of a random password nobody knows, made with the same
+        # parameters as real ones.
+        self._unknown_user_hash = self._password_hasher.hash(secrets.token_urlsafe(32))
         with self._database() as database:
             database.execute(
                 "CREATE TABLE IF NOT EXISTS users ("
@@ -43,16 +47,19 @@ class Accounts:
 
     def log_in(self, username: str, password: str) -> Session:
         with self._database() as database:
-            # Unknown usernames aren't handled yet: that's its own scenario
-            # (#15). Until then, fetchone() returns None and this unpacking
-            # fails rather than quietly refusing the login.
-            (password_hash,) = database.execute(
+            user = database.execute(
                 "SELECT password_hash FROM users WHERE username = ?", (username,)
             ).fetchone()
+        # An unknown username is still checked against a stand-in hash, so it
+        # takes as long to refuse as a wrong password and the response time
+        # doesn't reveal which usernames exist.
+        password_hash = user[0] if user else self._unknown_user_hash
         try:
             self._password_hasher.verify(password_hash, password)
         except VerifyMismatchError:
             raise LoginRefused from None
+        if user is None:
+            raise LoginRefused
         return Session(username)
 
     @contextmanager
