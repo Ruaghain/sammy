@@ -31,6 +31,11 @@ def test_logging_out():
     pass
 
 
+@scenario("user-login.feature", "Each user logs in as themselves")
+def test_each_user_logs_in_as_themselves():
+    pass
+
+
 @given(parsers.parse('I am logged in as "{username}"'))
 def given_i_am_logged_in_as(sammy: SammyDriver, username: str):
     sammy.add_user(username, "correct-horse")
