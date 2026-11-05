@@ -1,3 +1,4 @@
+import pytest
 from pytest_bdd import given, parsers, scenario, then, when
 
 from drivers.sammy import SammyDriver
@@ -5,6 +6,14 @@ from drivers.sammy import SammyDriver
 
 @scenario("user-login.feature", "Logging in with valid details")
 def test_logging_in_with_valid_details():
+    pass
+
+
+@pytest.mark.built_examples(
+    {"username": "test.user", "password": "wrong-password"},
+)
+@scenario("user-login.feature", "Login is refused without revealing which detail was wrong")
+def test_login_is_refused_without_revealing_which_detail_was_wrong():
     pass
 
 
@@ -21,3 +30,13 @@ def i_log_in(sammy: SammyDriver, username: str, password: str):
 @then(parsers.parse('I am logged in as "{username}"'))
 def i_am_logged_in_as(sammy: SammyDriver, username: str):
     assert sammy.logged_in_user() == username
+
+
+@then("I am not logged in")
+def i_am_not_logged_in(sammy: SammyDriver):
+    assert sammy.logged_in_user() is None
+
+
+@then("I am told my username or password is incorrect")
+def i_am_told_my_username_or_password_is_incorrect(sammy: SammyDriver):
+    assert sammy.login_was_refused()
