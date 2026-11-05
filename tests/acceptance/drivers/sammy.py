@@ -16,7 +16,7 @@ class SammyDriver:
     def __init__(self, database_dir: Path):
         # A throwaway database per scenario, so scenarios can't affect each other.
         self._accounts = Accounts(f"sqlite:///{database_dir / 'sammy.sqlite'}")
-        self._orchestrator = Orchestrator()
+        self._orchestrator = Orchestrator(self._accounts)
         self._session: Session | None = None
         self._login_refused = False
         self._asked_to_log_in = False
@@ -32,6 +32,11 @@ class SammyDriver:
             self._session = None
             self._login_refused = True
 
+    def log_out(self) -> None:
+        # The session is deliberately kept, like a stale cookie or a copied
+        # token, so the checks that follow show Sammy itself has forgotten it.
+        self._accounts.log_out(self._session)
+
     def ensure_logged_out(self) -> None:
         self._session = None
 
@@ -43,7 +48,7 @@ class SammyDriver:
             self._asked_to_log_in = True
 
     def logged_in_user(self) -> str | None:
-        return self._session.username if self._session else None
+        return self._accounts.user_for(self._session) if self._session else None
 
     def login_was_refused(self) -> bool:
         return self._login_refused
