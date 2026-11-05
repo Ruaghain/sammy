@@ -1,6 +1,6 @@
 [cosmic-ray]
-# Every listed path must exist; add "libs" once the first package under libs/ is created.
-module-path = "agent"
+# Every listed path must exist.
+module-path = ["agent", "libs"]
 excluded-modules = ["agent/*/tests/*", "libs/*/tests/*"]  # unit tests are not code under test
 timeout = 30.0
 test-command = "pytest -x -q tests/acceptance"  # survivors must point at scenario gaps, so unit tests do not count

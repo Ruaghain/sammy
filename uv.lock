@@ -2,12 +2,22 @@ version = 1
 revision = 5
 requires-python = ">=3.14"
 
+[manifest]
+members = [
+    "accounts",
+]
+
 [manifest.dependency-groups]
 dev = [
     { name = "cosmic-ray", specifier = ">=8.7.0" },
     { name = "pytest", specifier = ">=9.1,<9.2" },
     { name = "pytest-bdd", specifier = ">=9.0" },
 ]
+
+[[package]]
+name = "accounts"
+version = "0.1.0"
+source = { editable = "libs/accounts" }
 
 [[package]]
 name = "aiohappyeyeballs"
