@@ -2,7 +2,8 @@ import secrets
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from hashlib import sha256
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
@@ -12,7 +13,10 @@ _SQLITE_URL_PREFIX = "sqlite:///"
 
 @dataclass(frozen=True)
 class Session:
-    username: str
+    """Proof of a login, held by whoever logged in. The token is a secret, so
+    it is kept out of the repr and never ends up in logs by accident."""
+
+    token: str = field(repr=False)
 
 
 class LoginRefused(Exception):
@@ -37,6 +41,11 @@ class Accounts:
                 " username TEXT PRIMARY KEY,"
                 " password_hash TEXT NOT NULL)"
             )
+            database.execute(
+                "CREATE TABLE IF NOT EXISTS sessions ("
+                " token_hash TEXT PRIMARY KEY,"
+                " username TEXT NOT NULL REFERENCES users (username))"
+            )
 
     def create_user(self, username: str, password: str) -> None:
         with self._database() as database:
@@ -60,7 +69,28 @@ class Accounts:
             raise LoginRefused from None
         if user is None:
             raise LoginRefused
-        return Session(username)
+        session = Session(secrets.token_urlsafe(32))
+        with self._database() as database:
+            database.execute(
+                "INSERT INTO sessions (token_hash, username) VALUES (?, ?)",
+                (_token_hash(session), username),
+            )
+        return session
+
+    def user_for(self, session: Session) -> str | None:
+        """The user a session belongs to, or None once it has been logged out."""
+        with self._database() as database:
+            row = database.execute(
+                "SELECT username FROM sessions WHERE token_hash = ?",
+                (_token_hash(session),),
+            ).fetchone()
+        return row[0] if row else None
+
+    def log_out(self, session: Session) -> None:
+        with self._database() as database:
+            database.execute(
+                "DELETE FROM sessions WHERE token_hash = ?", (_token_hash(session),)
+            )
 
     @contextmanager
     def _database(self) -> Iterator[sqlite3.Connection]:
@@ -69,3 +99,10 @@ class Accounts:
             yield connection
         finally:
             connection.close()
+
+
+def _token_hash(session: Session) -> str:
+    # Session tokens are long and random, so a plain SHA-256 is enough; unlike
+    # passwords they don't need a slow, salted hash. Only the hash is stored,
+    # so a copy of the database can't be used to take over a session.
+    return sha256(session.token.encode()).hexdigest()

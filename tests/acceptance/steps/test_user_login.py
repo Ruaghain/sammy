@@ -26,6 +26,28 @@ def test_talking_to_sammy_requires_logging_in():
     pass
 
 
+@scenario("user-login.feature", "Logging out")
+def test_logging_out():
+    pass
+
+
+@given(parsers.parse('I am logged in as "{username}"'))
+def given_i_am_logged_in_as(sammy: SammyDriver, username: str):
+    sammy.add_user(username, "correct-horse")
+    sammy.log_in(username, "correct-horse")
+
+
+@when("I log out")
+def i_log_out(sammy: SammyDriver):
+    sammy.log_out()
+
+
+@then("I am asked to log in when I send Sammy a message")
+def i_am_asked_to_log_in_when_i_send_sammy_a_message(sammy: SammyDriver):
+    sammy.send_message("What's on the calendar today?")
+    assert sammy.was_asked_to_log_in()
+
+
 @given(parsers.parse('a user "{username}" with the password "{password}"'))
 def a_user_with_the_password(sammy: SammyDriver, username: str, password: str):
     sammy.add_user(username, password)
