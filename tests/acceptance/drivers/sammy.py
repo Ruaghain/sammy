@@ -66,6 +66,11 @@ class SammyDriver:
         except LoginRequired:
             self._asked_to_log_in = True
 
+    def my_session_token(self) -> str:
+        """The secret token of the current login, as a front end would hold it."""
+        assert self._session is not None, "not logged in"
+        return self._session.token
+
     def everything_recorded(self) -> str:
         """Everything Sammy has written down: every value in every table of its
         database, and every log record, as one block of text to search."""
