@@ -1,8 +1,5 @@
 import logging
-import secrets
 import uuid
-from dataclasses import dataclass, field
-from hashlib import sha256
 from pathlib import Path
 
 from alembic import command
@@ -24,7 +21,8 @@ from accounts.errors import (
     UsernameTaken,
 )
 from accounts.passwords import check_password, hash_password, unknown_user_hash
-from accounts.tables import ADMIN_ROLE, roles, sessions, user_roles, users
+from accounts.sessions import Session, SessionService
+from accounts.tables import ADMIN_ROLE, roles, user_roles, users
 
 __all__ = [
     "Accounts",
@@ -48,14 +46,6 @@ MANAGE_USERS = "manage users"
 MANAGE_ROLES = "manage roles"
 
 
-@dataclass(frozen=True)
-class Session:
-    """Proof of a login, held by whoever logged in. The token is a secret, so
-    it is kept out of the repr and never ends up in logs by accident."""
-
-    token: str = field(repr=False)
-
-
 class Accounts:
     def __init__(self, database_url: str):
         """database_url is a SQLAlchemy URL: sqlite:///path/to/sammy.sqlite or
@@ -63,6 +53,7 @@ class Accounts:
         brought up to date on start."""
         self._engine = create_engine(database_url)
         _migrate(self._engine)
+        self._sessions = SessionService()
 
     def create_user(self, username: str, password: str) -> None:
         with self._engine.begin() as database:
@@ -73,7 +64,7 @@ class Accounts:
         did it. The new user has no roles."""
         try:
             with self._engine.begin() as database:
-                acting = _acting(database, actor)
+                acting = self._acting(database, actor)
                 _require(database, acting, MANAGE_USERS)
                 _, public_id = self._insert_user(database, username, password)
         except IntegrityError:
@@ -87,7 +78,7 @@ class Accounts:
         who did it. Refused if they already hold it."""
         try:
             with self._engine.begin() as database:
-                acting = _acting(database, actor)
+                acting = self._acting(database, actor)
                 # Checked first, so someone without permission can't learn which
                 # users or roles exist from the refusal they get.
                 _require(database, acting, MANAGE_USERS)
@@ -111,7 +102,7 @@ class Accounts:
         the user already has, because permissions are checked on every
         request."""
         with self._engine.begin() as database:
-            acting = _acting(database, actor)
+            acting = self._acting(database, actor)
             _require(database, acting, MANAGE_USERS)
             user = database.execute(
                 select(users.c.id, users.c.public_id).where(users.c.username == username)
@@ -137,14 +128,14 @@ class Accounts:
         in again, and every session they have ends at once. Records who did
         it."""
         with self._engine.begin() as database:
-            acting = _acting(database, actor)
+            acting = self._acting(database, actor)
             _require(database, acting, MANAGE_USERS)
             user = database.execute(
                 select(users.c.id, users.c.public_id).where(users.c.username == username)
             ).one()
             if not _someone_can_manage(database, excluding=user.id):
                 raise LastManagerRequired
-            _disable(database, user.id)
+            self._disable(database, user.id)
         _record("user disabled", user.public_id, actor_public_id=acting.public_id)
 
     def give_role(self, username: str, role: str) -> None:
@@ -164,7 +155,7 @@ class Accounts:
             user_id = database.execute(
                 select(users.c.id).where(users.c.username == username)
             ).scalar_one()
-            _disable(database, user_id)
+            self._disable(database, user_id)
 
     def set_up(self, username: str, password: str) -> None:
         """Creates the first admin: a user holding the built-in admin role.
@@ -193,6 +184,19 @@ class Accounts:
                     .where(users.c.username == username)
                 ).scalars()
             )
+
+    def _acting(self, database, actor: Session | None):
+        """Who is acting, from their session. Refuses if they aren't logged in:
+        no session, or one that has been logged out."""
+        acting = self._sessions.owner(database, actor) if actor is not None else None
+        if acting is None:
+            raise LoginRequired
+        return acting
+
+    def _disable(self, database, user_id: int) -> None:
+        """Marks the user disabled and ends all their sessions."""
+        database.execute(update(users).where(users.c.id == user_id).values(disabled=True))
+        self._sessions.end_all_for(database, user_id)
 
     def _insert_user(self, database, username: str, password: str) -> tuple[int, uuid.UUID]:
         public_id = uuid.uuid7()
@@ -238,18 +242,15 @@ class Accounts:
         if user.disabled:
             _record("login refused", user.public_id, level=logging.WARNING)
             raise LoginRefused
-        session = Session(secrets.token_urlsafe(32))
         with self._engine.begin() as database:
-            database.execute(
-                insert(sessions).values(token_hash=_token_hash(session), user_id=user.id)
-            )
+            session = self._sessions.start(database, user.id)
         _record("login succeeded", user.public_id)
         return session
 
     def user_for(self, session: Session) -> str | None:
         """The user a session belongs to, or None once it has been logged out."""
         with self._engine.connect() as database:
-            user = _session_user(database, session)
+            user = self._sessions.owner(database, session)
         return user.username if user is not None else None
 
     def public_id(self, username: str) -> uuid.UUID | None:
@@ -262,38 +263,11 @@ class Accounts:
 
     def log_out(self, session: Session) -> None:
         with self._engine.begin() as database:
-            user = _session_user(database, session)
-            database.execute(
-                delete(sessions).where(sessions.c.token_hash == _token_hash(session))
-            )
+            user = self._sessions.owner(database, session)
+            self._sessions.end(database, session)
         # A session that's already gone has nobody to name.
         if user is not None:
             _record("logged out", user.public_id)
-
-
-def _session_user(database, session: Session):
-    """The user a session belongs to (their id, username and public_id), or
-    None if the session doesn't exist, e.g. because it has been logged out."""
-    return database.execute(
-        select(users.c.id, users.c.username, users.c.public_id)
-        .join(sessions, sessions.c.user_id == users.c.id)
-        .where(sessions.c.token_hash == _token_hash(session))
-    ).one_or_none()
-
-
-def _disable(database, user_id: int) -> None:
-    """Marks the user disabled and ends all their sessions."""
-    database.execute(update(users).where(users.c.id == user_id).values(disabled=True))
-    database.execute(delete(sessions).where(sessions.c.user_id == user_id))
-
-
-def _acting(database, actor: Session | None):
-    """Who is acting, from their session. Refuses if they aren't logged in:
-    no session, or one that has been logged out."""
-    acting = _session_user(database, actor) if actor is not None else None
-    if acting is None:
-        raise LoginRequired
-    return acting
 
 
 def _can(database, user_id: int, permission: str) -> bool:
@@ -334,10 +308,3 @@ def _migrate(engine: Engine) -> None:
     with engine.begin() as connection:
         config.attributes["connection"] = connection
         command.upgrade(config, "head")
-
-
-def _token_hash(session: Session) -> str:
-    # Session tokens are long and random, so a plain SHA-256 is enough; unlike
-    # passwords they don't need a slow, salted hash. Only the hash is stored,
-    # so a copy of the database can't be used to take over a session.
-    return sha256(session.token.encode()).hexdigest()
