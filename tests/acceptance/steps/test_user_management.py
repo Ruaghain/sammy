@@ -88,6 +88,11 @@ def test_a_user_cant_be_given_a_role_they_already_hold():
     pass
 
 
+@scenario("user-management.feature", "Giving a role affects only that user")
+def test_giving_a_role_affects_only_that_user():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0
