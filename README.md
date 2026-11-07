@@ -53,8 +53,10 @@ This is a [uv](https://docs.astral.sh/uv/) workspace with a single shared lockfi
 ```
 agent/<name>/         one package per agent (orchestrator-agent first)
   tests/              that agent's unit tests
-libs/accounts/        users and login (later)
+libs/accounts/        users, roles and login
   tests/              unit tests for accounts
+cli/                  the sammy command: starts Sammy (settings, logging, database, services)
+  tests/              unit tests for the entry point
 web/                  from-scratch web UI and server (later)
 tests/acceptance/
   features/           Gherkin .feature files, written in natural language
@@ -78,8 +80,17 @@ uv run pytest                  # run all tests
 uv run pytest tests/acceptance # acceptance tests only
 uv run pytest agent            # agent unit tests only
 uv run pytest libs             # shared library unit tests only
+uv run pytest cli              # entry-point unit tests only
 uv run pytest tools            # tooling tests only
 ```
+
+To create Sammy's database, or bring it up to date, point `SAMMY_DATABASE_URL` at it (in the environment or a local `.env` file) and run:
+
+```sh
+SAMMY_DATABASE_URL=sqlite:///sammy.sqlite uv run sammy migrate
+```
+
+Logs go to `logs/sammy.log` (rotated daily); `SAMMY_LOG_DIR`, `SAMMY_LOG_LEVEL` and `SAMMY_LOG_RETENTION_DAYS` change that.
 
 The tests use throwaway SQLite databases. To run the acceptance tests against PostgreSQL as well, start a disposable server and point `SAMMY_TEST_DATABASE_URL` at it:
 
