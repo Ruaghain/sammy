@@ -110,6 +110,29 @@ class Accounts:
             database.execute(insert(user_roles).values(user_id=user.id, role_id=role_id))
         _record("role given", user.public_id, actor_public_id=acting.public_id, role=role)
 
+    def remove_role_as(self, actor: Session | None, username: str, role: str) -> None:
+        """Removes a role from a user on behalf of whoever holds `actor`, and
+        records who did it. It applies straight away, including to sessions
+        the user already has, because permissions are checked on every
+        request."""
+        with self._engine.begin() as database:
+            acting = _acting(database, actor)
+            _require(database, acting, MANAGE_USERS)
+            user = database.execute(
+                select(users.c.id, users.c.public_id).where(users.c.username == username)
+            ).one()
+            role_id = database.execute(
+                select(roles.c.id).where(roles.c.name == role)
+            ).scalar_one_or_none()
+            if role_id is None:
+                raise UnknownRole
+            database.execute(
+                delete(user_roles).where(
+                    user_roles.c.user_id == user.id, user_roles.c.role_id == role_id
+                )
+            )
+        _record("role removed", user.public_id, actor_public_id=acting.public_id, role=role)
+
     def disable_as(self, actor: Session | None, username: str) -> None:
         """Disables a user on behalf of whoever holds `actor`."""
         with self._engine.begin() as database:
