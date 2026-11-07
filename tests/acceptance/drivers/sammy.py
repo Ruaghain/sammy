@@ -99,6 +99,18 @@ class SammyDriver:
             for record in self._log.records()
         )
 
+    def has_recorded_about_nobody(self, event: str) -> bool:
+        """Whether Sammy has logged this event without naming any user."""
+        return any(
+            getattr(record, "event", None) == event
+            and getattr(record, "public_id", None) is None
+            for record in self._log.records()
+        )
+
+    def everything_logged(self) -> str:
+        """Every log line Sammy has written, without the database."""
+        return "\n".join(self._log.lines())
+
     def close(self) -> None:
         self._log.stop()
 
@@ -135,9 +147,25 @@ class _LogRecorder(logging.Handler):
         return list(self._records)
 
     def lines(self) -> list[str]:
+        """Each record as text: its message plus any extra fields attached to
+        it, since a log file's format may print those too."""
         formatter = logging.Formatter("%(name)s %(levelname)s %(message)s")
-        return [formatter.format(record) for record in self._records]
+        return [
+            " ".join([formatter.format(record), *map(str, _extra_fields(record).values())])
+            for record in self._records
+        ]
 
     def stop(self) -> None:
         self._root.removeHandler(self)
         self._root.setLevel(self._previous_level)
+
+
+_STANDARD_RECORD_FIELDS = set(vars(logging.makeLogRecord({})))
+
+
+def _extra_fields(record: logging.LogRecord) -> dict:
+    return {
+        name: value
+        for name, value in vars(record).items()
+        if name not in _STANDARD_RECORD_FIELDS and name not in ("message", "asctime")
+    }
