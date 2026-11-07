@@ -162,6 +162,11 @@ class SammyDriver:
         goes through disable()."""
         self._accounts.disable(username)
 
+    def has_been_given_role(self, username: str, role: str) -> None:
+        """Sets up a user's role directly, as a Given; giving a role as an
+        admin goes through give_role()."""
+        self._accounts.give_role(username, role)
+
     def run_setup(self, username: str, password: str) -> None:
         try:
             self._accounts.set_up(username, password)

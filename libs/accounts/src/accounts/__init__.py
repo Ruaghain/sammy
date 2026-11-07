@@ -166,6 +166,16 @@ class Accounts:
             _disable(database, user.id)
         _record("user disabled", user.public_id, actor_public_id=acting.public_id)
 
+    def give_role(self, username: str, role: str) -> None:
+        """Gives a user a role directly, with no actor and no log entry: a
+        building block for setting up users. Admins use give_role_as."""
+        with self._engine.begin() as database:
+            user_id = database.execute(
+                select(users.c.id).where(users.c.username == username)
+            ).scalar_one()
+            role_id = database.execute(select(roles.c.id).where(roles.c.name == role)).scalar_one()
+            database.execute(insert(user_roles).values(user_id=user_id, role_id=role_id))
+
     def disable(self, username: str) -> None:
         """Disables a user directly, with no actor and no log entry: a building
         block for setting up a disabled user. Admins use disable_as."""
