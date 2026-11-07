@@ -1,11 +1,11 @@
 import logging
 import uuid
 
+from sqlalchemy import Engine
 from sqlalchemy.exc import IntegrityError
 
 from accounts.audit import record as _record
 from accounts.audit import record_about_nobody
-from accounts.database import connect
 from accounts.errors import (
     LastManagerRequired,
     LoginRefused,
@@ -32,11 +32,11 @@ class AccountService:
     SessionService, which work inside the transactions it opens.
     """
 
-    def __init__(self, database_url: str):
-        """database_url is a SQLAlchemy URL: sqlite:///path/to/sammy.sqlite or
-        postgresql+psycopg://user:password@host/database. The schema is
-        brought up to date on start."""
-        self._engine = connect(database_url)
+    def __init__(self, engine: Engine):
+        """`engine` is Sammy's database, created by whatever starts Sammy and
+        shared with other packages. Its accounts tables must already be up to
+        date: run accounts.migrate(engine) first, at startup."""
+        self._engine = engine
         self._sessions = SessionService()
         self._users = UserService()
         self._roles = RoleService()
