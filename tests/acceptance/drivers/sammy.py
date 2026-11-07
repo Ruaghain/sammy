@@ -8,7 +8,7 @@ file changes.
 
 import logging
 
-from sqlalchemy import MetaData, create_engine, select
+from sqlalchemy import MetaData, create_engine, func, select
 
 from accounts import Accounts, LoginRefused, Session
 from orchestrator_agent import LoginRequired, Orchestrator
@@ -45,6 +45,35 @@ class SammyDriver:
         # The session is deliberately kept, like a stale cookie or a copied
         # token, so the checks that follow show Sammy itself has forgotten it.
         self._accounts.log_out(self._session)
+
+    def user_count(self) -> int:
+        """How many users Sammy's database holds."""
+        engine = create_engine(self._database_url)
+        try:
+            users = MetaData()
+            users.reflect(engine, only=["users"])
+            with engine.connect() as database:
+                return database.execute(
+                    select(func.count()).select_from(users.tables["users"])
+                ).scalar_one()
+        finally:
+            engine.dispose()
+
+    def run_setup(self, username: str, password: str) -> None:
+        self._accounts.set_up(username, password)
+
+    def can_log_in(self, username: str, password: str) -> bool:
+        """Tries the login on the side, without changing who "I" am logged in
+        as, and logs that trial session out again."""
+        try:
+            session = self._accounts.log_in(username, password)
+        except LoginRefused:
+            return False
+        self._accounts.log_out(session)
+        return True
+
+    def roles_of(self, username: str) -> set[str]:
+        return self._accounts.roles_of(username)
 
     def someone_logs_in(self, username: str) -> None:
         self.add_user(username, "correct-horse")
