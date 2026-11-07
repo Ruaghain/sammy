@@ -130,3 +130,22 @@ Feature: Managing users
     Then "test.user" can no longer create users
     But "test.admin" can still create users
     And "test.zed" can still create users
+
+  Scenario: Disabling a user affects only that user
+    Given I am logged in as the admin "test.admin"
+    And "test.user" is logged in
+    And "test.zed" is logged in
+    When I disable "test.user"
+    Then "test.user" is no longer logged in
+    But "test.zed" is still logged in
+    And "test.zed" can still log in
+    And "test.admin" can still log in
+    And "test.admin" can still create users
+
+  Scenario: A disabled admin doesn't count as someone who can manage users
+    Given I am logged in as the admin "test.admin"
+    And "test.other" is logged in with the "admin" role
+    And "test.other" has been disabled
+    When I remove the "admin" role from "test.admin"
+    Then I am told at least one user must be able to manage users and roles
+    And "test.admin" has the "admin" role
