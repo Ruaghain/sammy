@@ -7,6 +7,7 @@ from sqlalchemy import create_engine, text
 
 import accounts
 from accounts import Accounts, Session
+from accounts.sessions import token_hash
 
 
 def database_url(tmp_path) -> str:
@@ -54,7 +55,7 @@ def test_upgrading_from_0001_keeps_users_and_their_sessions(tmp_path):
         )
         connection.execute(
             text("INSERT INTO sessions (token_hash, username) VALUES (:t, :u)"),
-            {"t": accounts._token_hash(Session(token)), "u": "test.user"},
+            {"t": token_hash(Session(token)), "u": "test.user"},
         )
     engine.dispose()
 
@@ -83,5 +84,5 @@ def test_downgrading_to_0001_keeps_users_and_their_sessions(tmp_path):
         users = connection.execute(text("SELECT username FROM users ORDER BY username")).all()
     engine.dispose()
 
-    assert sessions == [(accounts._token_hash(session), "test.user")]
+    assert sessions == [(token_hash(session), "test.user")]
     assert users == [("test.other",), ("test.user",)]
