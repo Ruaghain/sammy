@@ -26,3 +26,18 @@ def given_i_am_not_logged_in(sammy: SammyDriver):
 @then("I am asked to log in")
 def i_am_asked_to_log_in(sammy: SammyDriver):
     assert sammy.was_asked_to_log_in()
+
+
+@then("I am not logged in")
+def i_am_not_logged_in(sammy: SammyDriver):
+    assert sammy.logged_in_user() is None
+
+
+@then("I am told my username or password is incorrect")
+def i_am_told_my_username_or_password_is_incorrect(sammy: SammyDriver):
+    assert sammy.login_was_refused()
+
+
+@then(parsers.parse('Sammy has recorded that a login as "{username}" was refused'))
+def sammy_has_recorded_a_refused_login(sammy: SammyDriver, username: str):
+    assert sammy.has_recorded("login refused", username)

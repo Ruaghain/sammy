@@ -150,6 +150,11 @@ class SammyDriver:
         finally:
             engine.dispose()
 
+    def has_been_disabled(self, username: str) -> None:
+        """Sets up a disabled user directly, as a Given; disabling as an admin
+        goes through disable()."""
+        self._accounts.disable(username)
+
     def run_setup(self, username: str, password: str) -> None:
         try:
             self._accounts.set_up(username, password)

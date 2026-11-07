@@ -73,6 +73,11 @@ def test_the_last_user_who_can_manage_users_cant_be_disabled():
     pass
 
 
+@scenario("user-management.feature", "A disabled user is refused like any other failed login")
+def test_a_disabled_user_is_refused_like_any_other_failed_login():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0
@@ -226,3 +231,8 @@ def i_am_told_someone_must_manage(sammy: SammyDriver):
 @then(parsers.parse('"{username}" can still log in'))
 def can_still_log_in(sammy: SammyDriver, username: str):
     assert sammy.can_log_in_with_their_password(username)
+
+
+@given(parsers.parse('"{username}" has been disabled'))
+def has_been_disabled(sammy: SammyDriver, username: str):
+    sammy.has_been_disabled(username)
