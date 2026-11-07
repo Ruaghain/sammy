@@ -13,6 +13,11 @@ def test_setup_is_refused_once_a_user_exists():
     pass
 
 
+@scenario("user-management.feature", "A new user can log in and starts with no roles")
+def test_a_new_user_can_log_in_and_starts_with_no_roles():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0
@@ -51,3 +56,24 @@ def i_cant_log_in_as(sammy: SammyDriver, username: str, password: str):
 @then("Sammy has recorded that setup was refused")
 def sammy_has_recorded_that_setup_was_refused(sammy: SammyDriver):
     assert sammy.has_recorded_about_nobody("setup refused")
+
+
+@given(parsers.parse('I am logged in as the admin "{username}"'))
+def i_am_logged_in_as_the_admin(sammy: SammyDriver, username: str):
+    sammy.run_setup(username, "correct-horse")
+    sammy.log_in(username, "correct-horse")
+
+
+@when(parsers.parse('I create the user "{username}" with the password "{password}"'))
+def i_create_the_user(sammy: SammyDriver, username: str, password: str):
+    sammy.create_user(username, password)
+
+
+@then(parsers.parse('"{username}" has no roles'))
+def has_no_roles(sammy: SammyDriver, username: str):
+    assert sammy.roles_of(username) == set()
+
+
+@then(parsers.parse('Sammy has recorded that "{actor}" created "{username}"'))
+def sammy_has_recorded_that_someone_created_a_user(sammy: SammyDriver, actor: str, username: str):
+    assert sammy.has_recorded("user created", username, by=actor)

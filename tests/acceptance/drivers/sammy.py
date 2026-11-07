@@ -34,6 +34,10 @@ class SammyDriver:
     def add_user(self, username: str, password: str) -> None:
         self._accounts.create_user(username, password)
 
+    def create_user(self, username: str, password: str) -> None:
+        """Creates a user as "me", whoever I'm logged in as."""
+        self._accounts.create_user_as(self._session, username, password)
+
     def log_in(self, username: str, password: str) -> None:
         try:
             self._session = self._accounts.log_in(username, password)
@@ -126,13 +130,16 @@ class SammyDriver:
             engine.dispose()
         return "\n".join(values + self._log.lines())
 
-    def has_recorded(self, event: str, username: str) -> bool:
-        """Whether Sammy has logged this event for this user. Logs name users
-        only by public id, so the username is looked up first."""
+    def has_recorded(self, event: str, username: str, by: str | None = None) -> bool:
+        """Whether Sammy has logged this event for this user, and, if `by` is
+        given, that this person did it. Logs name users only by public id, so
+        the usernames are looked up first."""
         public_id = self._accounts.public_id(username)
+        actor_id = self._accounts.public_id(by) if by is not None else None
         return public_id is not None and any(
             getattr(record, "event", None) == event
             and getattr(record, "public_id", None) == str(public_id)
+            and (by is None or getattr(record, "actor_public_id", None) == str(actor_id))
             for record in self._log.records()
         )
 

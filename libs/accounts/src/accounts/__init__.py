@@ -55,6 +55,14 @@ class Accounts:
         with self._engine.begin() as database:
             self._insert_user(database, username, password)
 
+    def create_user_as(self, actor: Session, username: str, password: str) -> None:
+        """Creates a user on behalf of whoever holds `actor`, and records who
+        did it. The new user has no roles."""
+        with self._engine.begin() as database:
+            actor_public_id = _session_user(database, actor).public_id
+            _, public_id = self._insert_user(database, username, password)
+        _record("user created", public_id, actor_public_id=actor_public_id)
+
     def set_up(self, username: str, password: str) -> None:
         """Creates the first admin: a user holding the built-in admin role.
         Only allowed while Sammy has no users at all."""
@@ -131,11 +139,8 @@ class Accounts:
     def user_for(self, session: Session) -> str | None:
         """The user a session belongs to, or None once it has been logged out."""
         with self._engine.connect() as database:
-            return database.execute(
-                select(users.c.username)
-                .join(sessions, sessions.c.user_id == users.c.id)
-                .where(sessions.c.token_hash == _token_hash(session))
-            ).scalar_one_or_none()
+            user = _session_user(database, session)
+        return user.username if user is not None else None
 
     def public_id(self, username: str) -> uuid.UUID | None:
         """How anything outside the database refers to this user, e.g. in logs.
@@ -147,29 +152,40 @@ class Accounts:
 
     def log_out(self, session: Session) -> None:
         with self._engine.begin() as database:
-            public_id = database.execute(
-                select(users.c.public_id)
-                .join(sessions, sessions.c.user_id == users.c.id)
-                .where(sessions.c.token_hash == _token_hash(session))
-            ).scalar_one_or_none()
+            user = _session_user(database, session)
             database.execute(
                 delete(sessions).where(sessions.c.token_hash == _token_hash(session))
             )
         # A session that's already gone has nobody to name.
-        if public_id is not None:
-            _record("logged out", public_id)
+        if user is not None:
+            _record("logged out", user.public_id)
 
 
-def _record(event: str, public_id: uuid.UUID, level: int = logging.INFO) -> None:
-    """Logs an event about a user. The event and public id are also attached
-    as fields, so they can be found without parsing the message."""
-    _log.log(
-        level,
-        "%s: user %s",
-        event,
-        public_id,
-        extra={"event": event, "public_id": str(public_id)},
-    )
+def _session_user(database, session: Session):
+    """The user a session belongs to (their username and public_id), or None
+    if the session doesn't exist, e.g. because it has been logged out."""
+    return database.execute(
+        select(users.c.username, users.c.public_id)
+        .join(sessions, sessions.c.user_id == users.c.id)
+        .where(sessions.c.token_hash == _token_hash(session))
+    ).one_or_none()
+
+
+def _record(
+    event: str,
+    public_id: uuid.UUID,
+    level: int = logging.INFO,
+    actor_public_id: uuid.UUID | None = None,
+) -> None:
+    """Logs an event about a user, and who did it if someone else did. The
+    event and public ids are also attached as fields, so they can be found
+    without parsing the message."""
+    fields = {"event": event, "public_id": str(public_id)}
+    if actor_public_id is None:
+        _log.log(level, "%s: user %s", event, public_id, extra=fields)
+    else:
+        fields["actor_public_id"] = str(actor_public_id)
+        _log.log(level, "%s: user %s by user %s", event, public_id, actor_public_id, extra=fields)
 
 
 def _migrate(engine: Engine) -> None:
