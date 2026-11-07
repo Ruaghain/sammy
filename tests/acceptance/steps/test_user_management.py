@@ -23,6 +23,11 @@ def test_an_admin_gives_a_user_a_role():
     pass
 
 
+@scenario("user-management.feature", "A username can only be used once")
+def test_a_username_can_only_be_used_once():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0
@@ -97,3 +102,8 @@ def can_create_users(sammy: SammyDriver, username: str):
 @then(parsers.parse('Sammy has recorded that "{actor}" gave "{username}" the "{role}" role'))
 def sammy_has_recorded_that_someone_gave_a_role(sammy: SammyDriver, actor: str, username: str, role: str):
     assert sammy.has_recorded("role given", username, by=actor, role=role)
+
+
+@then("I am told the username is already taken")
+def i_am_told_the_username_is_already_taken(sammy: SammyDriver):
+    assert sammy.username_was_taken()

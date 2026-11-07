@@ -10,7 +10,7 @@ import logging
 
 from sqlalchemy import MetaData, create_engine, func, select
 
-from accounts import Accounts, LoginRefused, Session, SetupAlreadyDone
+from accounts import Accounts, LoginRefused, Session, SetupAlreadyDone, UsernameTaken
 from orchestrator_agent import LoginRequired, Orchestrator
 
 
@@ -27,6 +27,7 @@ class SammyDriver:
         self._login_refused = False
         self._asked_to_log_in = False
         self._setup_refused = False
+        self._username_taken = False
         # Passwords of the users this driver created, so it can act as them.
         self._passwords: dict[str, str] = {}
         self._probes = 0
@@ -40,8 +41,16 @@ class SammyDriver:
 
     def create_user(self, username: str, password: str) -> None:
         """Creates a user as "me", whoever I'm logged in as."""
-        self._accounts.create_user_as(self._session, username, password)
+        try:
+            self._accounts.create_user_as(self._session, username, password)
+        except UsernameTaken:
+            self._username_taken = True
+            return
+        self._username_taken = False
         self._passwords[username] = password
+
+    def username_was_taken(self) -> bool:
+        return self._username_taken
 
     def give_role(self, username: str, role: str) -> None:
         """Gives a user a role as "me"."""
