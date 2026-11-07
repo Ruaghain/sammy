@@ -92,12 +92,18 @@ class SammyDriver:
         except PermissionDenied:
             self._permission_denied = True
 
+    def remove_role(self, username: str, role: str) -> None:
+        """Removes a role from a user as "me"."""
+        self._accounts.remove_role_as(self._session, username, role)
+
     def role_was_unknown(self) -> bool:
         return self._role_unknown
 
     def can_create_users(self, username: str) -> bool:
-        """Logs in as this user on the side and tries to create a user."""
-        session = self._accounts.log_in(username, self._passwords[username])
+        """Tries to create a user as this person: through the session they're
+        already logged in with, if any, otherwise a login on the side."""
+        existing = self._sessions_by_user.get(username)
+        session = existing or self._accounts.log_in(username, self._passwords[username])
         try:
             self._probes += 1
             self._accounts.create_user_as(session, f"test.probe{self._probes}", "correct-horse")
@@ -105,7 +111,8 @@ class SammyDriver:
         except PermissionDenied:
             return False
         finally:
-            self._accounts.log_out(session)
+            if existing is None:
+                self._accounts.log_out(session)
 
     def log_in(self, username: str, password: str) -> None:
         try:
@@ -160,6 +167,7 @@ class SammyDriver:
     def someone_logs_in(self, username: str) -> None:
         self.add_user(username, "correct-horse")
         self._sessions_by_user[username] = self._accounts.log_in(username, "correct-horse")
+        self._passwords[username] = "correct-horse"
 
     def someone_logs_out(self, username: str) -> None:
         self._accounts.log_out(self._sessions_by_user[username])

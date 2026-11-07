@@ -58,6 +58,11 @@ def test_managing_users_requires_logging_in():
     pass
 
 
+@scenario("user-management.feature", "Removing a role applies to a user who is already logged in")
+def test_removing_a_role_applies_to_a_user_who_is_already_logged_in():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0
@@ -168,3 +173,24 @@ def sammy_has_recorded_a_refused_permission(sammy: SammyDriver, username: str, p
 @when(parsers.parse('I disable "{username}"'))
 def i_disable(sammy: SammyDriver, username: str):
     sammy.disable(username)
+
+
+@given(parsers.parse('"{username}" is logged in with the "{role}" role'))
+def is_logged_in_with_the_role(sammy: SammyDriver, username: str, role: str):
+    sammy.someone_logs_in(username)
+    sammy.give_role(username, role)
+
+
+@when(parsers.parse('I remove the "{role}" role from "{username}"'))
+def i_remove_the_role(sammy: SammyDriver, role: str, username: str):
+    sammy.remove_role(username, role)
+
+
+@then(parsers.parse('"{username}" can no longer create users'))
+def can_no_longer_create_users(sammy: SammyDriver, username: str):
+    assert not sammy.can_create_users(username)
+
+
+@then(parsers.parse('Sammy has recorded that "{actor}" removed the "{role}" role from "{username}"'))
+def sammy_has_recorded_that_someone_removed_a_role(sammy: SammyDriver, actor: str, role: str, username: str):
+    assert sammy.has_recorded("role removed", username, by=actor, role=role)
