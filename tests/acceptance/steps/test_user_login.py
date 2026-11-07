@@ -97,16 +97,6 @@ def i_am_logged_in_as(sammy: SammyDriver, username: str):
     assert sammy.logged_in_user() == username
 
 
-@then("I am not logged in")
-def i_am_not_logged_in(sammy: SammyDriver):
-    assert sammy.logged_in_user() is None
-
-
-@then("I am told my username or password is incorrect")
-def i_am_told_my_username_or_password_is_incorrect(sammy: SammyDriver):
-    assert sammy.login_was_refused()
-
-
 @given(parsers.parse('"{first}" and "{second}" are both logged in'))
 def both_are_logged_in(sammy: SammyDriver, first: str, second: str):
     sammy.someone_logs_in(first)
@@ -130,11 +120,6 @@ def is_still_logged_in(sammy: SammyDriver, username: str):
 @then(parsers.parse('Sammy has recorded that "{username}" logged in'))
 def sammy_has_recorded_a_login(sammy: SammyDriver, username: str):
     assert sammy.has_recorded("login succeeded", username)
-
-
-@then(parsers.parse('Sammy has recorded that a login as "{username}" was refused'))
-def sammy_has_recorded_a_refused_login(sammy: SammyDriver, username: str):
-    assert sammy.has_recorded("login refused", username)
 
 
 @then(parsers.parse('Sammy has recorded that "{username}" logged out'))

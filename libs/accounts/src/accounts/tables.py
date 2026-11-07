@@ -4,7 +4,7 @@ The schema itself is created and changed only by the Alembic migrations in
 migrations/versions/. Keep the two in step: a change here needs a migration.
 """
 
-from sqlalchemy import Column, ForeignKey, Integer, MetaData, Table, Text, Uuid
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, MetaData, Table, Text, Uuid, false
 
 # Alembic's record of which migrations have run. It has its own name so other
 # packages can keep their own migrations in the same database later.
@@ -22,6 +22,8 @@ users = Table(
     Column("public_id", Uuid, nullable=False, unique=True),
     Column("username", Text, nullable=False, unique=True),
     Column("password_hash", Text, nullable=False),
+    # A disabled user can't log in.
+    Column("disabled", Boolean, nullable=False, server_default=false()),
 )
 
 sessions = Table(

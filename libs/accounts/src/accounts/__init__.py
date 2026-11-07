@@ -9,7 +9,7 @@ from alembic import command
 from alembic.config import Config
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from sqlalchemy import Engine, create_engine, delete, insert, select
+from sqlalchemy import Engine, create_engine, delete, insert, select, update
 from sqlalchemy.exc import IntegrityError
 
 from accounts.tables import ADMIN_ROLE, roles, sessions, user_roles, users
@@ -155,6 +155,13 @@ class Accounts:
         # What disabling does is specified by a later scenario (#81).
         raise NotImplementedError("Disabling users isn't built yet")
 
+    def disable(self, username: str) -> None:
+        """Marks a user as disabled, so they can no longer log in."""
+        with self._engine.begin() as database:
+            database.execute(
+                update(users).where(users.c.username == username).values(disabled=True)
+            )
+
     def set_up(self, username: str, password: str) -> None:
         """Creates the first admin: a user holding the built-in admin role.
         Only allowed while Sammy has no users at all."""
@@ -197,9 +204,9 @@ class Accounts:
     def log_in(self, username: str, password: str) -> Session:
         with self._engine.connect() as database:
             user = database.execute(
-                select(users.c.id, users.c.public_id, users.c.password_hash).where(
-                    users.c.username == username
-                )
+                select(
+                    users.c.id, users.c.public_id, users.c.password_hash, users.c.disabled
+                ).where(users.c.username == username)
             ).one_or_none()
         # An unknown username is still checked against a stand-in hash, so it
         # takes as long to refuse as a wrong password and the response time
@@ -219,6 +226,12 @@ class Accounts:
                 )
             raise LoginRefused from None
         if user is None:
+            raise LoginRefused
+        # Refused only after the full password check, the same way as a wrong
+        # password, so neither the message nor the timing shows the account is
+        # disabled.
+        if user.disabled:
+            _record("login refused", user.public_id, level=logging.WARNING)
             raise LoginRefused
         session = Session(secrets.token_urlsafe(32))
         with self._engine.begin() as database:
