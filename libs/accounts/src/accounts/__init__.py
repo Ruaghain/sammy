@@ -105,6 +105,13 @@ class Accounts:
             database.execute(insert(user_roles).values(user_id=user.id, role_id=role_id))
         _record("role given", user.public_id, actor_public_id=acting.public_id, role=role)
 
+    def disable_as(self, actor: Session, username: str) -> None:
+        """Disables a user on behalf of whoever holds `actor`."""
+        with self._engine.begin() as database:
+            _require(database, _session_user(database, actor), MANAGE_USERS)
+        # What disabling does is specified by later scenarios (#79, #81).
+        raise NotImplementedError("Disabling users isn't built yet")
+
     def set_up(self, username: str, password: str) -> None:
         """Creates the first admin: a user holding the built-in admin role.
         Only allowed while Sammy has no users at all."""
