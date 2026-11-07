@@ -98,3 +98,19 @@ Feature: Managing users
     When I disable "test.user"
     Then "test.user" is no longer logged in
     And Sammy has recorded that "test.admin" disabled "test.user"
+
+  Scenario: A user can't be given a role they already hold
+    Given I am logged in as the admin "test.admin"
+    And a user "test.user" with the password "correct-horse"
+    And "test.user" has been given the "admin" role
+    When I give "test.user" the "admin" role
+    Then I am told "test.user" already has the "admin" role
+    And "test.user" has the "admin" role
+
+  Scenario: Giving a role affects only that user
+    Given I am logged in as the admin "test.admin"
+    And a user "test.other" with the password "battery-staple"
+    And a user "test.user" with the password "correct-horse"
+    When I give "test.other" the "admin" role
+    Then "test.other" has the "admin" role
+    And "test.user" has no roles
