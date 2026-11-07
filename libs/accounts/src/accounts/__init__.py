@@ -71,6 +71,8 @@ class Accounts:
         try:
             self._password_hasher.verify(password_hash, password)
         except VerifyMismatchError:
+            if user is not None:
+                _record("login refused", user.public_id, level=logging.WARNING)
             raise LoginRefused from None
         if user is None:
             raise LoginRefused
@@ -106,11 +108,15 @@ class Accounts:
             )
 
 
-def _record(event: str, public_id: uuid.UUID) -> None:
+def _record(event: str, public_id: uuid.UUID, level: int = logging.INFO) -> None:
     """Logs an event about a user. The event and public id are also attached
     as fields, so they can be found without parsing the message."""
-    _log.info(
-        "%s: user %s", event, public_id, extra={"event": event, "public_id": str(public_id)}
+    _log.log(
+        level,
+        "%s: user %s",
+        event,
+        public_id,
+        extra={"event": event, "public_id": str(public_id)},
     )
 
 

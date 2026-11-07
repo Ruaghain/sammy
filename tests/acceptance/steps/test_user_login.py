@@ -46,6 +46,11 @@ def test_a_successful_login_is_recorded():
     pass
 
 
+@scenario("user-login.feature", "A refused login is recorded")
+def test_a_refused_login_is_recorded():
+    pass
+
+
 @given(parsers.parse('I am logged in as "{username}"'))
 def given_i_am_logged_in_as(sammy: SammyDriver, username: str):
     sammy.add_user(username, "correct-horse")
@@ -116,3 +121,8 @@ def is_still_logged_in(sammy: SammyDriver, username: str):
 @then(parsers.parse('Sammy has recorded that "{username}" logged in'))
 def sammy_has_recorded_a_login(sammy: SammyDriver, username: str):
     assert sammy.has_recorded("login succeeded", username)
+
+
+@then(parsers.parse('Sammy has recorded that a login as "{username}" was refused'))
+def sammy_has_recorded_a_refused_login(sammy: SammyDriver, username: str):
+    assert sammy.has_recorded("login refused", username)
