@@ -78,6 +78,11 @@ def test_a_disabled_user_is_refused_like_any_other_failed_login():
     pass
 
 
+@scenario("user-management.feature", "Disabling a user ends their session")
+def test_disabling_a_user_ends_their_session():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0
@@ -236,3 +241,18 @@ def can_still_log_in(sammy: SammyDriver, username: str):
 @given(parsers.parse('"{username}" has been disabled'))
 def has_been_disabled(sammy: SammyDriver, username: str):
     sammy.has_been_disabled(username)
+
+
+@given(parsers.parse('"{username}" is logged in'))
+def is_logged_in(sammy: SammyDriver, username: str):
+    sammy.someone_logs_in(username)
+
+
+@then(parsers.parse('"{username}" is no longer logged in'))
+def is_no_longer_logged_in(sammy: SammyDriver, username: str):
+    assert not sammy.is_logged_in(username)
+
+
+@then(parsers.parse('Sammy has recorded that "{actor}" disabled "{username}"'))
+def sammy_has_recorded_that_someone_disabled_a_user(sammy: SammyDriver, actor: str, username: str):
+    assert sammy.has_recorded("user disabled", username, by=actor)
