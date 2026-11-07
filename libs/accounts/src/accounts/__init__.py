@@ -4,7 +4,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import Engine, create_engine, delete, false, insert, select, update
+from sqlalchemy import Engine, create_engine, delete, insert, select
 from sqlalchemy.exc import IntegrityError
 
 from accounts.audit import record as _record
@@ -20,8 +20,9 @@ from accounts.errors import (
     UnknownRole,
     UsernameTaken,
 )
-from accounts.passwords import check_password, hash_password, unknown_user_hash
+from accounts.passwords import check_password, unknown_user_hash
 from accounts.sessions import Session, SessionService
+from accounts.users import UserService
 from accounts.tables import ADMIN_ROLE, roles, user_roles, users
 
 __all__ = [
@@ -54,10 +55,11 @@ class Accounts:
         self._engine = create_engine(database_url)
         _migrate(self._engine)
         self._sessions = SessionService()
+        self._users = UserService()
 
     def create_user(self, username: str, password: str) -> None:
         with self._engine.begin() as database:
-            self._insert_user(database, username, password)
+            self._users.create(database, username, password)
 
     def create_user_as(self, actor: Session | None, username: str, password: str) -> None:
         """Creates a user on behalf of whoever holds `actor`, and records who
@@ -66,7 +68,7 @@ class Accounts:
             with self._engine.begin() as database:
                 acting = self._acting(database, actor)
                 _require(database, acting, MANAGE_USERS)
-                _, public_id = self._insert_user(database, username, password)
+                _, public_id = self._users.create(database, username, password)
         except IntegrityError:
             # The unique constraint on username is the check, so two requests
             # at once can't both create the same username.
@@ -82,9 +84,7 @@ class Accounts:
                 # Checked first, so someone without permission can't learn which
                 # users or roles exist from the refusal they get.
                 _require(database, acting, MANAGE_USERS)
-                user = database.execute(
-                    select(users.c.id, users.c.public_id).where(users.c.username == username)
-                ).one()
+                user = self._users.find(database, username)
                 role_id = database.execute(
                     select(roles.c.id).where(roles.c.name == role)
                 ).scalar_one_or_none()
@@ -104,9 +104,7 @@ class Accounts:
         with self._engine.begin() as database:
             acting = self._acting(database, actor)
             _require(database, acting, MANAGE_USERS)
-            user = database.execute(
-                select(users.c.id, users.c.public_id).where(users.c.username == username)
-            ).one()
+            user = self._users.find(database, username)
             role_id = database.execute(
                 select(roles.c.id).where(roles.c.name == role)
             ).scalar_one_or_none()
@@ -119,7 +117,7 @@ class Accounts:
             )
             # Checked after the change, inside the transaction: raising rolls
             # the removal back.
-            if not _someone_can_manage(database):
+            if not _someone_can_manage(database, self._users.active_ids(database)):
                 raise LastManagerRequired
         _record("role removed", user.public_id, actor_public_id=acting.public_id, role=role)
 
@@ -130,10 +128,10 @@ class Accounts:
         with self._engine.begin() as database:
             acting = self._acting(database, actor)
             _require(database, acting, MANAGE_USERS)
-            user = database.execute(
-                select(users.c.id, users.c.public_id).where(users.c.username == username)
-            ).one()
-            if not _someone_can_manage(database, excluding=user.id):
+            user = self._users.find(database, username)
+            if not _someone_can_manage(
+                database, self._users.active_ids(database), excluding=user.id
+            ):
                 raise LastManagerRequired
             self._disable(database, user.id)
         _record("user disabled", user.public_id, actor_public_id=acting.public_id)
@@ -142,9 +140,7 @@ class Accounts:
         """Gives a user a role directly, with no actor and no log entry: a
         building block for setting up users. Admins use give_role_as."""
         with self._engine.begin() as database:
-            user_id = database.execute(
-                select(users.c.id).where(users.c.username == username)
-            ).scalar_one()
+            user_id = self._users.find(database, username).id
             role_id = database.execute(select(roles.c.id).where(roles.c.name == role)).scalar_one()
             database.execute(insert(user_roles).values(user_id=user_id, role_id=role_id))
 
@@ -152,21 +148,19 @@ class Accounts:
         """Disables a user directly, with no actor and no log entry: a building
         block for setting up a disabled user. Admins use disable_as."""
         with self._engine.begin() as database:
-            user_id = database.execute(
-                select(users.c.id).where(users.c.username == username)
-            ).scalar_one()
+            user_id = self._users.find(database, username).id
             self._disable(database, user_id)
 
     def set_up(self, username: str, password: str) -> None:
         """Creates the first admin: a user holding the built-in admin role.
         Only allowed while Sammy has no users at all."""
         with self._engine.begin() as database:
-            if database.execute(select(users.c.id).limit(1)).first() is not None:
+            if self._users.any_exist(database):
                 record_about_nobody(
                     "setup refused", "setup refused: users already exist", level=logging.WARNING
                 )
                 raise SetupAlreadyDone
-            user_id, public_id = self._insert_user(database, username, password)
+            user_id, public_id = self._users.create(database, username, password)
             admin_role_id = database.execute(
                 select(roles.c.id).where(roles.c.name == ADMIN_ROLE)
             ).scalar_one()
@@ -195,29 +189,12 @@ class Accounts:
 
     def _disable(self, database, user_id: int) -> None:
         """Marks the user disabled and ends all their sessions."""
-        database.execute(update(users).where(users.c.id == user_id).values(disabled=True))
+        self._users.disable(database, user_id)
         self._sessions.end_all_for(database, user_id)
-
-    def _insert_user(self, database, username: str, password: str) -> tuple[int, uuid.UUID]:
-        public_id = uuid.uuid7()
-        user_id = database.execute(
-            insert(users)
-            .values(
-                public_id=public_id,
-                username=username,
-                password_hash=hash_password(password),
-            )
-            .returning(users.c.id)
-        ).scalar_one()
-        return user_id, public_id
 
     def log_in(self, username: str, password: str) -> Session:
         with self._engine.connect() as database:
-            user = database.execute(
-                select(
-                    users.c.id, users.c.public_id, users.c.password_hash, users.c.disabled
-                ).where(users.c.username == username)
-            ).one_or_none()
+            user = self._users.find(database, username)
         # An unknown username is still checked against a stand-in hash, so it
         # takes as long to refuse as a wrong password and the response time
         # doesn't reveal which usernames exist.
@@ -257,9 +234,8 @@ class Accounts:
         """How anything outside the database refers to this user, e.g. in logs.
         None if there is no such user."""
         with self._engine.connect() as database:
-            return database.execute(
-                select(users.c.public_id).where(users.c.username == username)
-            ).scalar_one_or_none()
+            user = self._users.find(database, username)
+        return user.public_id if user is not None else None
 
     def log_out(self, session: Session) -> None:
         with self._engine.begin() as database:
@@ -283,14 +259,13 @@ def _can(database, user_id: int, permission: str) -> bool:
     )
 
 
-def _someone_can_manage(database, excluding: int | None = None) -> bool:
-    """Whether at least one active user, other than `excluding`, can still
-    manage both users and roles, so Sammy can never be locked out of its own
-    administration. Disabled users can't log in, so they don't count."""
-    active_users = select(users.c.id).where(users.c.disabled == false())
+def _someone_can_manage(database, active_ids: list[int], excluding: int | None = None) -> bool:
+    """Whether at least one of the active users, other than `excluding`, can
+    still manage both users and roles, so Sammy can never be locked out of its
+    own administration. Disabled users can't log in, so they don't count."""
     return any(
         _can(database, user_id, MANAGE_USERS) and _can(database, user_id, MANAGE_ROLES)
-        for user_id in database.execute(active_users).scalars()
+        for user_id in active_ids
         if user_id != excluding
     )
 
