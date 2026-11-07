@@ -35,6 +35,7 @@ class SammyDriver:
         self._accounts = Accounts(database_url)
         self._orchestrator = Orchestrator(self._accounts)
         self._session: Session | None = None
+        self._my_username: str | None = None
         self._login_refused = False
         self._asked_to_log_in = False
         self._setup_refused = False
@@ -120,12 +121,16 @@ class SammyDriver:
         """Tries to create a user as this person: through the session they're
         already logged in with, if any, otherwise a login on the side."""
         existing = self._sessions_by_user.get(username)
+        if existing is None and self._session is not None and self._my_username == username:
+            # "Me": the session I logged in with, even if Sammy has since
+            # ended it (that's exactly what this check should catch).
+            existing = self._session
         session = existing or self._accounts.log_in(username, self._passwords[username])
         try:
             self._probes += 1
             self._accounts.create_user_as(session, f"test.probe{self._probes}", "correct-horse")
             return True
-        except PermissionDenied:
+        except (PermissionDenied, LoginRequired):
             return False
         finally:
             if existing is None:
@@ -134,6 +139,7 @@ class SammyDriver:
     def log_in(self, username: str, password: str) -> None:
         try:
             self._session = self._accounts.log_in(username, password)
+            self._my_username = username
             self._login_refused = False
         except LoginRefused:
             self._session = None

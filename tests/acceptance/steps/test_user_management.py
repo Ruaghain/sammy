@@ -103,6 +103,11 @@ def test_removing_a_role_affects_only_that_user():
     pass
 
 
+@scenario("user-management.feature", "Disabling a user affects only that user")
+def test_disabling_a_user_affects_only_that_user():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0

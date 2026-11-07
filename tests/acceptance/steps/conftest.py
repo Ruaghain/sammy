@@ -41,3 +41,8 @@ def i_am_told_my_username_or_password_is_incorrect(sammy: SammyDriver):
 @then(parsers.parse('Sammy has recorded that a login as "{username}" was refused'))
 def sammy_has_recorded_a_refused_login(sammy: SammyDriver, username: str):
     assert sammy.has_recorded("login refused", username)
+
+
+@then(parsers.parse('"{username}" is still logged in'))
+def is_still_logged_in(sammy: SammyDriver, username: str):
+    assert sammy.is_logged_in(username)
