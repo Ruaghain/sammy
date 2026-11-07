@@ -22,13 +22,14 @@ Only agents that have been built are listed here.
 flowchart LR
     U[You<br/>CLI / web UI] -->|after login| O[Orchestrator]
     O -->|routes by message content| A[Specialist agents]
-    O -.->|reads agent descriptions| D[(Database<br/>users, agent registry)]
+    O -.->|reads agent descriptions| D[(Database<br/>users, roles, agent registry)]
     O -.-> L[(Ollama VM<br/>local models)]
     A -.-> L
     A -.->|opt-in| F[(Frontier LLM<br/>e.g. Claude)]
 ```
 
 - **User login.** People log in before they can talk to Sammy. User accounts are stored in Sammy's database, with passwords kept only as salted hashes.
+- **Roles and permissions.** What each person can do comes from their roles. A role is a named set of permissions, such as managing users, viewing or managing the agent list, or talking to a particular agent. A person can hold several roles and gets everything those roles allow. New users start with none, so access is always given on purpose. The built-in `admin` role can do everything and can't be changed. The orchestrator only routes a request to agents the person is allowed to use.
 - **SQLite or PostgreSQL.** `SAMMY_DATABASE_URL` chooses the database: a local SQLite file (`sqlite:///path/to/sammy.sqlite`) or an existing PostgreSQL server (`postgresql+psycopg://user:password@host/database`). Sammy creates and updates its tables itself when it starts.
 - **LLM-based routing.** Each agent's name and description are stored in a database. The orchestrator gives a local model the user's message and these descriptions, and asks it to pick the best agent. There are no hand-written keyword rules, so adding an agent means registering it, not editing routing logic.
 - **One model interface, many backends.** Agents depend on a small `ModelClient` protocol, not on a specific provider. Ollama is the default implementation. A frontier-model client (for example Anthropic's API) implements the same protocol, so switching an agent to the cloud is a configuration change, not a code change.
