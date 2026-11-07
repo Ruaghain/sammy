@@ -81,6 +81,13 @@ class SammyDriver:
         except PermissionDenied:
             self._permission_denied = True
 
+    def disable(self, username: str) -> None:
+        """Disables a user as "me"."""
+        try:
+            self._accounts.disable_as(self._session, username)
+        except PermissionDenied:
+            self._permission_denied = True
+
     def role_was_unknown(self) -> bool:
         return self._role_unknown
 

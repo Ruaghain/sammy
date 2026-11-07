@@ -43,6 +43,10 @@ def test_a_user_cant_be_given_a_role_that_doesnt_exist():
         "action": 'give "test.other" the "admin" role',
         "unchanged": '"test.other" has no roles',
     },
+    {
+        "action": 'disable "test.other"',
+        "unchanged": 'I can log in as "test.other" with the password "correct-horse"',
+    },
 )
 @scenario("user-management.feature", "Only users who can manage users can change them")
 def test_only_users_who_can_manage_users_can_change_them():
@@ -154,3 +158,8 @@ def the_user_doesnt_exist(sammy: SammyDriver, username: str):
 @then(parsers.parse('Sammy has recorded that "{username}" was refused permission to {permission}'))
 def sammy_has_recorded_a_refused_permission(sammy: SammyDriver, username: str, permission: str):
     assert sammy.has_recorded("permission refused", username, permission=permission)
+
+
+@when(parsers.parse('I disable "{username}"'))
+def i_disable(sammy: SammyDriver, username: str):
+    sammy.disable(username)
