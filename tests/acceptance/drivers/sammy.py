@@ -13,6 +13,7 @@ from sqlalchemy import MetaData, create_engine, func, select
 from accounts import (
     Accounts,
     LoginRefused,
+    PermissionDenied,
     Session,
     SetupAlreadyDone,
     UnknownRole,
@@ -36,6 +37,7 @@ class SammyDriver:
         self._setup_refused = False
         self._username_taken = False
         self._role_unknown = False
+        self._permission_denied = False
         # Passwords of the users this driver created, so it can act as them.
         self._passwords: dict[str, str] = {}
         self._probes = 0
@@ -54,11 +56,20 @@ class SammyDriver:
         except UsernameTaken:
             self._username_taken = True
             return
+        except PermissionDenied:
+            self._permission_denied = True
+            return
         self._username_taken = False
         self._passwords[username] = password
 
     def username_was_taken(self) -> bool:
         return self._username_taken
+
+    def permission_was_denied(self) -> bool:
+        return self._permission_denied
+
+    def user_exists(self, username: str) -> bool:
+        return self._accounts.public_id(username) is not None
 
     def give_role(self, username: str, role: str) -> None:
         """Gives a user a role as "me"."""
@@ -78,6 +89,8 @@ class SammyDriver:
             self._probes += 1
             self._accounts.create_user_as(session, f"test.probe{self._probes}", "correct-horse")
             return True
+        except PermissionDenied:
+            return False
         finally:
             self._accounts.log_out(session)
 

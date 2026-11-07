@@ -16,6 +16,10 @@ from accounts.tables import ADMIN_ROLE, roles, sessions, user_roles, users
 
 _MIGRATIONS = Path(__file__).parent / "migrations"
 
+# Permissions are fixed in code (see CLAUDE.md, Stored data). The built-in
+# admin role has every one of them.
+MANAGE_USERS = "manage users"
+
 # Logs name users only by public_id: never by username, and never with a
 # password or session token (see CLAUDE.md, Logging).
 _log = logging.getLogger(__name__)
@@ -46,6 +50,10 @@ class UnknownRole(Exception):
     """Raised when a role is named that doesn't exist."""
 
 
+class PermissionDenied(Exception):
+    """Raised when someone tries something none of their roles allows."""
+
+
 class Accounts:
     def __init__(self, database_url: str):
         """database_url is a SQLAlchemy URL: sqlite:///path/to/sammy.sqlite or
@@ -69,19 +77,20 @@ class Accounts:
         did it. The new user has no roles."""
         try:
             with self._engine.begin() as database:
-                actor_public_id = _session_user(database, actor).public_id
+                acting = _session_user(database, actor)
+                _require(database, acting, MANAGE_USERS)
                 _, public_id = self._insert_user(database, username, password)
         except IntegrityError:
             # The unique constraint on username is the check, so two requests
             # at once can't both create the same username.
             raise UsernameTaken from None
-        _record("user created", public_id, actor_public_id=actor_public_id)
+        _record("user created", public_id, actor_public_id=acting.public_id)
 
     def give_role_as(self, actor: Session, username: str, role: str) -> None:
         """Gives a user a role on behalf of whoever holds `actor`, and records
         who did it."""
         with self._engine.begin() as database:
-            actor_public_id = _session_user(database, actor).public_id
+            acting = _session_user(database, actor)
             user = database.execute(
                 select(users.c.id, users.c.public_id).where(users.c.username == username)
             ).one()
@@ -91,7 +100,7 @@ class Accounts:
             if role_id is None:
                 raise UnknownRole
             database.execute(insert(user_roles).values(user_id=user.id, role_id=role_id))
-        _record("role given", user.public_id, actor_public_id=actor_public_id, role=role)
+        _record("role given", user.public_id, actor_public_id=acting.public_id, role=role)
 
     def set_up(self, username: str, password: str) -> None:
         """Creates the first admin: a user holding the built-in admin role.
@@ -192,13 +201,33 @@ class Accounts:
 
 
 def _session_user(database, session: Session):
-    """The user a session belongs to (their username and public_id), or None
-    if the session doesn't exist, e.g. because it has been logged out."""
+    """The user a session belongs to (their id, username and public_id), or
+    None if the session doesn't exist, e.g. because it has been logged out."""
     return database.execute(
-        select(users.c.username, users.c.public_id)
+        select(users.c.id, users.c.username, users.c.public_id)
         .join(sessions, sessions.c.user_id == users.c.id)
         .where(sessions.c.token_hash == _token_hash(session))
     ).one_or_none()
+
+
+def _can(database, user_id: int, permission: str) -> bool:
+    """Whether any of the user's roles allows this. The admin role allows
+    everything; other roles' permissions arrive with role management."""
+    return (
+        database.execute(
+            select(roles.c.id)
+            .join(user_roles, user_roles.c.role_id == roles.c.id)
+            .where(user_roles.c.user_id == user_id, roles.c.name == ADMIN_ROLE)
+        ).first()
+        is not None
+    )
+
+
+def _require(database, acting, permission: str) -> None:
+    """Refuses, and records the refusal, unless `acting` may do this."""
+    if not _can(database, acting.id, permission):
+        _record("permission refused", acting.public_id, level=logging.WARNING, permission=permission)
+        raise PermissionDenied
 
 
 def _record(
@@ -206,16 +235,16 @@ def _record(
     public_id: uuid.UUID,
     level: int = logging.INFO,
     actor_public_id: uuid.UUID | None = None,
-    role: str | None = None,
+    **details: str,
 ) -> None:
-    """Logs an event about a user, who did it if someone else did, and which
-    role it concerned, if any. These are also attached as fields, so they can
-    be found without parsing the message."""
+    """Logs an event about a user, who did it if someone else did, and any
+    details (e.g. role, permission). These are also attached as fields, so
+    they can be found without parsing the message."""
     fields = {"event": event, "public_id": str(public_id)}
     message, args = "%s: user %s", [event, public_id]
-    if role is not None:
-        fields["role"] = role
-        message, args = message + " role %s", [*args, role]
+    for name, value in details.items():
+        fields[name] = value
+        message, args = message + f" {name} %s", [*args, value]
     if actor_public_id is not None:
         fields["actor_public_id"] = str(actor_public_id)
         message, args = message + " by user %s", [*args, actor_public_id]

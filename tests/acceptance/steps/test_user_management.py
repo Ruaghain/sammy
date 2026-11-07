@@ -1,3 +1,4 @@
+import pytest
 from pytest_bdd import given, parsers, scenario, then, when
 
 from drivers.sammy import SammyDriver
@@ -30,6 +31,17 @@ def test_a_username_can_only_be_used_once():
 
 @scenario("user-management.feature", "A user can't be given a role that doesn't exist")
 def test_a_user_cant_be_given_a_role_that_doesnt_exist():
+    pass
+
+
+@pytest.mark.built_examples(
+    {
+        "action": 'create the user "test.new" with the password "correct-horse"',
+        "unchanged": 'the user "test.new" doesn\'t exist',
+    },
+)
+@scenario("user-management.feature", "Only users who can manage users can change them")
+def test_only_users_who_can_manage_users_can_change_them():
     pass
 
 
@@ -117,3 +129,24 @@ def i_am_told_the_username_is_already_taken(sammy: SammyDriver):
 @then("I am told the role doesn't exist")
 def i_am_told_the_role_doesnt_exist(sammy: SammyDriver):
     assert sammy.role_was_unknown()
+
+
+@given(parsers.parse('I am logged in as "{username}", who has no roles'))
+def i_am_logged_in_as_someone_with_no_roles(sammy: SammyDriver, username: str):
+    sammy.add_user(username, "correct-horse")
+    sammy.log_in(username, "correct-horse")
+
+
+@then("I am told I don't have permission")
+def i_am_told_i_dont_have_permission(sammy: SammyDriver):
+    assert sammy.permission_was_denied()
+
+
+@then(parsers.parse('the user "{username}" doesn\'t exist'))
+def the_user_doesnt_exist(sammy: SammyDriver, username: str):
+    assert not sammy.user_exists(username)
+
+
+@then(parsers.parse('Sammy has recorded that "{username}" was refused permission to {permission}'))
+def sammy_has_recorded_a_refused_permission(sammy: SammyDriver, username: str, permission: str):
+    assert sammy.has_recorded("permission refused", username, permission=permission)
