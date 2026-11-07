@@ -68,6 +68,11 @@ def test_the_last_user_who_can_manage_users_keeps_the_admin_role():
     pass
 
 
+@scenario("user-management.feature", "The last user who can manage users can't be disabled")
+def test_the_last_user_who_can_manage_users_cant_be_disabled():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0
@@ -216,3 +221,8 @@ def i_am_logged_in_as_the_only_admin(sammy: SammyDriver, username: str):
 @then("I am told at least one user must be able to manage users and roles")
 def i_am_told_someone_must_manage(sammy: SammyDriver):
     assert sammy.last_manager_was_protected()
+
+
+@then(parsers.parse('"{username}" can still log in'))
+def can_still_log_in(sammy: SammyDriver, username: str):
+    assert sammy.can_log_in_with_their_password(username)

@@ -147,7 +147,12 @@ class Accounts:
         """Disables a user on behalf of whoever holds `actor`."""
         with self._engine.begin() as database:
             _require(database, _acting(database, actor), MANAGE_USERS)
-        # What disabling does is specified by later scenarios (#79, #81).
+            user_id = database.execute(
+                select(users.c.id).where(users.c.username == username)
+            ).scalar_one()
+            if not _someone_can_manage(database, excluding=user_id):
+                raise LastManagerRequired
+        # What disabling does is specified by a later scenario (#81).
         raise NotImplementedError("Disabling users isn't built yet")
 
     def set_up(self, username: str, password: str) -> None:
@@ -280,12 +285,14 @@ def _can(database, user_id: int, permission: str) -> bool:
     )
 
 
-def _someone_can_manage(database) -> bool:
-    """Whether at least one user can still manage both users and roles, so
-    Sammy can never be locked out of its own administration."""
+def _someone_can_manage(database, excluding: int | None = None) -> bool:
+    """Whether at least one user, other than `excluding`, can still manage
+    both users and roles, so Sammy can never be locked out of its own
+    administration."""
     return any(
         _can(database, user_id, MANAGE_USERS) and _can(database, user_id, MANAGE_ROLES)
         for user_id in database.execute(select(users.c.id)).scalars()
+        if user_id != excluding
     )
 
 
