@@ -10,7 +10,14 @@ import logging
 
 from sqlalchemy import MetaData, create_engine, func, select
 
-from accounts import Accounts, LoginRefused, Session, SetupAlreadyDone, UsernameTaken
+from accounts import (
+    Accounts,
+    LoginRefused,
+    Session,
+    SetupAlreadyDone,
+    UnknownRole,
+    UsernameTaken,
+)
 from orchestrator_agent import LoginRequired, Orchestrator
 
 
@@ -28,6 +35,7 @@ class SammyDriver:
         self._asked_to_log_in = False
         self._setup_refused = False
         self._username_taken = False
+        self._role_unknown = False
         # Passwords of the users this driver created, so it can act as them.
         self._passwords: dict[str, str] = {}
         self._probes = 0
@@ -54,7 +62,14 @@ class SammyDriver:
 
     def give_role(self, username: str, role: str) -> None:
         """Gives a user a role as "me"."""
-        self._accounts.give_role_as(self._session, username, role)
+        try:
+            self._accounts.give_role_as(self._session, username, role)
+            self._role_unknown = False
+        except UnknownRole:
+            self._role_unknown = True
+
+    def role_was_unknown(self) -> bool:
+        return self._role_unknown
 
     def can_create_users(self, username: str) -> bool:
         """Logs in as this user on the side and tries to create a user."""

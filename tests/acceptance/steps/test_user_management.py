@@ -28,6 +28,11 @@ def test_a_username_can_only_be_used_once():
     pass
 
 
+@scenario("user-management.feature", "A user can't be given a role that doesn't exist")
+def test_a_user_cant_be_given_a_role_that_doesnt_exist():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0
@@ -107,3 +112,8 @@ def sammy_has_recorded_that_someone_gave_a_role(sammy: SammyDriver, actor: str, 
 @then("I am told the username is already taken")
 def i_am_told_the_username_is_already_taken(sammy: SammyDriver):
     assert sammy.username_was_taken()
+
+
+@then("I am told the role doesn't exist")
+def i_am_told_the_role_doesnt_exist(sammy: SammyDriver):
+    assert sammy.role_was_unknown()
