@@ -7,12 +7,36 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError
 from sqlalchemy import Engine, create_engine, delete, false, insert, select, update
 from sqlalchemy.exc import IntegrityError
 
+from accounts.audit import record as _record
+from accounts.audit import record_about_nobody
+from accounts.errors import (
+    LastManagerRequired,
+    LoginRefused,
+    LoginRequired,
+    PermissionDenied,
+    RoleAlreadyHeld,
+    SetupAlreadyDone,
+    UnknownRole,
+    UsernameTaken,
+)
+from accounts.passwords import check_password, hash_password, unknown_user_hash
 from accounts.tables import ADMIN_ROLE, roles, sessions, user_roles, users
+
+__all__ = [
+    "Accounts",
+    "LastManagerRequired",
+    "LoginRefused",
+    "LoginRequired",
+    "PermissionDenied",
+    "RoleAlreadyHeld",
+    "Session",
+    "SetupAlreadyDone",
+    "UnknownRole",
+    "UsernameTaken",
+]
 
 _MIGRATIONS = Path(__file__).parent / "migrations"
 
@@ -20,10 +44,6 @@ _MIGRATIONS = Path(__file__).parent / "migrations"
 # admin role has every one of them.
 MANAGE_USERS = "manage users"
 MANAGE_ROLES = "manage roles"
-
-# Logs name users only by public_id: never by username, and never with a
-# password or session token (see CLAUDE.md, Logging).
-_log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -34,41 +54,6 @@ class Session:
     token: str = field(repr=False)
 
 
-class LoginRefused(Exception):
-    """Raised for every failed login, whatever the reason, so the refusal
-    reveals nothing about which detail was wrong."""
-
-
-class SetupAlreadyDone(Exception):
-    """Raised when setup is run on a Sammy that already has users."""
-
-
-class UsernameTaken(Exception):
-    """Raised when creating a user whose username is already in use."""
-
-
-class UnknownRole(Exception):
-    """Raised when a role is named that doesn't exist."""
-
-
-class LoginRequired(Exception):
-    """Raised when someone who isn't logged in tries something that needs it,
-    such as talking to Sammy or managing users."""
-
-
-class PermissionDenied(Exception):
-    """Raised when someone tries something none of their roles allows."""
-
-
-class LastManagerRequired(Exception):
-    """Raised when a change would leave no active user able to manage both
-    users and roles."""
-
-
-class RoleAlreadyHeld(Exception):
-    """Raised when giving someone a role they already hold."""
-
-
 class Accounts:
     def __init__(self, database_url: str):
         """database_url is a SQLAlchemy URL: sqlite:///path/to/sammy.sqlite or
@@ -76,12 +61,6 @@ class Accounts:
         brought up to date on start."""
         self._engine = create_engine(database_url)
         _migrate(self._engine)
-        # Argon2id with a random salt per hash; the salt and parameters are
-        # stored inside the hash string itself.
-        self._password_hasher = PasswordHasher()
-        # The hash of a random password nobody knows, made with the same
-        # parameters as real ones.
-        self._unknown_user_hash = self._password_hasher.hash(secrets.token_urlsafe(32))
 
     def create_user(self, username: str, password: str) -> None:
         with self._engine.begin() as database:
@@ -190,7 +169,9 @@ class Accounts:
         Only allowed while Sammy has no users at all."""
         with self._engine.begin() as database:
             if database.execute(select(users.c.id).limit(1)).first() is not None:
-                _log.warning("setup refused: users already exist", extra={"event": "setup refused"})
+                record_about_nobody(
+                    "setup refused", "setup refused: users already exist", level=logging.WARNING
+                )
                 raise SetupAlreadyDone
             user_id, public_id = self._insert_user(database, username, password)
             admin_role_id = database.execute(
@@ -218,7 +199,7 @@ class Accounts:
             .values(
                 public_id=public_id,
                 username=username,
-                password_hash=self._password_hasher.hash(password),
+                password_hash=hash_password(password),
             )
             .returning(users.c.id)
         ).scalar_one()
@@ -234,20 +215,19 @@ class Accounts:
         # An unknown username is still checked against a stand-in hash, so it
         # takes as long to refuse as a wrong password and the response time
         # doesn't reveal which usernames exist.
-        password_hash = user.password_hash if user is not None else self._unknown_user_hash
-        try:
-            self._password_hasher.verify(password_hash, password)
-        except VerifyMismatchError:
+        password_hash = user.password_hash if user is not None else unknown_user_hash()
+        if not check_password(password_hash, password):
             if user is not None:
                 _record("login refused", user.public_id, level=logging.WARNING)
             else:
                 # Never the username: people sometimes type their password
                 # into the username box.
-                _log.warning(
+                record_about_nobody(
+                    "login refused for unknown user",
                     "login refused: no such user",
-                    extra={"event": "login refused for unknown user"},
+                    level=logging.WARNING,
                 )
-            raise LoginRefused from None
+            raise LoginRefused
         if user is None:
             raise LoginRefused
         # Refused only after the full password check, the same way as a wrong
@@ -344,27 +324,6 @@ def _require(database, acting, permission: str) -> None:
     if not _can(database, acting.id, permission):
         _record("permission refused", acting.public_id, level=logging.WARNING, permission=permission)
         raise PermissionDenied
-
-
-def _record(
-    event: str,
-    public_id: uuid.UUID,
-    level: int = logging.INFO,
-    actor_public_id: uuid.UUID | None = None,
-    **details: str,
-) -> None:
-    """Logs an event about a user, who did it if someone else did, and any
-    details (e.g. role, permission). These are also attached as fields, so
-    they can be found without parsing the message."""
-    fields = {"event": event, "public_id": str(public_id)}
-    message, args = "%s: user %s", [event, public_id]
-    for name, value in details.items():
-        fields[name] = value
-        message, args = message + f" {name} %s", [*args, value]
-    if actor_public_id is not None:
-        fields["actor_public_id"] = str(actor_public_id)
-        message, args = message + " by user %s", [*args, actor_public_id]
-    _log.log(level, message, *args, extra=fields)
 
 
 def _migrate(engine: Engine) -> None:
