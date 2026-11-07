@@ -32,6 +32,23 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   its provider is explicitly set to it and `ANTHROPIC_API_KEY` is present.
 - A local `.env` file is supported for development and is gitignored.
 
+## Logging
+
+- Library and agent code only calls `logging.getLogger(__name__)`. Handlers
+  are set up once, by whichever entry point starts Sammy (CLI now, `web/`'s
+  backend later), never by library code, so tests never write log files.
+- Logs go to one file, `sammy.log`, in the folder set by `SAMMY_LOG_DIR`
+  (default `./logs`, gitignored). It rotates at midnight UTC into
+  `sammy.log.<date>`, and files older than `SAMMY_LOG_RETENTION_DAYS`
+  (default 30) are deleted. `SAMMY_LOG_LEVEL` sets the level (default
+  `INFO`). Lines are plain text with UTC timestamps.
+- Only one process writes the file at a time. If two ever run at once (e.g.
+  the CLI and the web server), they need separate files first.
+- Logs identify a user only by their `public_id` (see Stored data), never by
+  username, and never contain passwords or session tokens. A refused login
+  for an unknown username logs that no such user exists, without the
+  username: people sometimes type their password into the username box.
+
 ## Stored data
 
 - Users and the agent registry live in a database, at the location set by
@@ -51,8 +68,17 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   its model the user's message and these descriptions and asks it to choose
   the best agent, so routing has no hand-written rules. An agent's model stays
   in the environment configuration above, not in the registry.
+- Each user has three identifiers:
+  - `id` - auto-incrementing integer primary key, used only inside the
+    database (foreign keys, joins). It never leaves the database: it can
+    change when data moves to another database, and it reveals how many
+    users exist.
+  - `public_id` - a UUIDv7 (`uuid.uuid7()`), created with the user and never
+    changed. Anything that leaves the database refers to a user by it: logs
+    now, URLs and APIs later.
+  - `username` - unique, used only for logging in.
 - Store only a salted hash of each password, made with a dedicated password
-  hashing algorithm. Never log passwords or session tokens.
+  hashing algorithm. Never log passwords or session tokens (see Logging).
 - Acceptance tests use a throwaway database, set up through the driver layer
   (`tests/acceptance/drivers/database.py`): a new SQLite file per scenario,
   or a fresh PostgreSQL database per scenario when `SAMMY_TEST_DATABASE_URL`
@@ -113,7 +139,13 @@ visible to anyone.
 - When asked to review a draft spec, give suggestions in the conversation:
   wording, missing or redundant scenarios, `Examples` rows, implementation
   detail leaking into the Gherkin, whether each scenario makes sense in
-  context. The human applies them.
+  context, and whether its logging is covered (below). The human applies
+  them.
+- Logging is specified per feature. Every feature that changes something
+  (creates, changes, removes, grants, refuses) has a scenario for each event
+  Sammy logs, in the form `Then Sammy has recorded that …`. A feature that
+  logs nothing says so, and why, in its description. Keeping secrets out of
+  everything Sammy records is specified once, in `keeping-secrets.feature`.
 - Task issues follow step 3 too: branch from the issue, set In Progress,
   PR with `Closes #<n>`.
 - Never commit on `master`; it only changes through merged PRs. GitHub
