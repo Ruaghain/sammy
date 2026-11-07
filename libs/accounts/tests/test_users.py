@@ -5,8 +5,8 @@ from alembic.config import Config
 from argon2 import PasswordHasher
 from sqlalchemy import create_engine, text
 
-from accounts.database import MIGRATIONS
-from accounts import AccountService, Session
+from accounts.schema import MIGRATIONS
+from accounts import Session
 from accounts.sessions import token_hash
 
 
@@ -14,8 +14,8 @@ def database_url(tmp_path) -> str:
     return f"sqlite:///{tmp_path / 'sammy.sqlite'}"
 
 
-def test_each_user_gets_their_own_uuid7_public_id(tmp_path):
-    accounts_ = AccountService(database_url(tmp_path))
+def test_each_user_gets_their_own_uuid7_public_id(tmp_path, start_accounts):
+    accounts_ = start_accounts(database_url(tmp_path))
     accounts_.create_user("test.user", "correct-horse")
     accounts_.create_user("test.other", "battery-staple")
 
@@ -26,20 +26,20 @@ def test_each_user_gets_their_own_uuid7_public_id(tmp_path):
     assert first != second
 
 
-def test_an_unknown_username_has_no_public_id(tmp_path):
-    assert AccountService(database_url(tmp_path)).public_id("unknown.user") is None
+def test_an_unknown_username_has_no_public_id(tmp_path, start_accounts):
+    assert start_accounts(database_url(tmp_path)).public_id("unknown.user") is None
 
 
-def test_a_public_id_never_changes(tmp_path):
-    AccountService(database_url(tmp_path)).create_user("test.user", "correct-horse")
-    before = AccountService(database_url(tmp_path)).public_id("test.user")
+def test_a_public_id_never_changes(tmp_path, start_accounts):
+    start_accounts(database_url(tmp_path)).create_user("test.user", "correct-horse")
+    before = start_accounts(database_url(tmp_path)).public_id("test.user")
 
-    after = AccountService(database_url(tmp_path)).public_id("test.user")
+    after = start_accounts(database_url(tmp_path)).public_id("test.user")
 
     assert after == before
 
 
-def test_upgrading_from_0001_keeps_users_and_their_sessions(tmp_path):
+def test_upgrading_from_0001_keeps_users_and_their_sessions(tmp_path, start_accounts):
     url = database_url(tmp_path)
     token = "an-existing-session-token"
     engine = create_engine(url)
@@ -59,20 +59,19 @@ def test_upgrading_from_0001_keeps_users_and_their_sessions(tmp_path):
         )
     engine.dispose()
 
-    upgraded = AccountService(url)  # applies 0002
+    upgraded = start_accounts(url)  # migrates 0001 -> head
 
     assert upgraded.user_for(Session(token)) == "test.user"
     assert upgraded.public_id("test.user").version == 7
     upgraded.log_in("test.user", "correct-horse")
 
 
-def test_downgrading_to_0001_keeps_users_and_their_sessions(tmp_path):
+def test_downgrading_to_0001_keeps_users_and_their_sessions(tmp_path, start_accounts):
     url = database_url(tmp_path)
-    accounts_ = AccountService(url)  # at head
+    accounts_ = start_accounts(url)  # at head
     accounts_.create_user("test.other", "battery-staple")
     accounts_.create_user("test.user", "correct-horse")
     session = accounts_.log_in("test.user", "correct-horse")
-    accounts_._engine.dispose()
 
     engine = create_engine(url)
     with engine.begin() as connection:

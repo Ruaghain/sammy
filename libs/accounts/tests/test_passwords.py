@@ -5,7 +5,7 @@ import sqlite3
 import pytest
 from argon2 import PasswordHasher
 
-from accounts import AccountService, LoginRefused
+from accounts import LoginRefused
 
 
 def stored_password_hashes(database_path) -> dict[str, str]:
@@ -13,9 +13,9 @@ def stored_password_hashes(database_path) -> dict[str, str]:
         return dict(database.execute("SELECT username, password_hash FROM users"))
 
 
-def test_stores_an_argon2id_hash_never_the_password(tmp_path):
+def test_stores_an_argon2id_hash_never_the_password(tmp_path, start_accounts):
     database_path = tmp_path / "sammy.sqlite"
-    accounts = AccountService(f"sqlite:///{database_path}")
+    accounts = start_accounts(f"sqlite:///{database_path}")
 
     accounts.create_user("test.user", "correct-horse")
 
@@ -24,9 +24,9 @@ def test_stores_an_argon2id_hash_never_the_password(tmp_path):
     assert "correct-horse" not in stored
 
 
-def test_the_same_password_is_salted_differently_for_each_user(tmp_path):
+def test_the_same_password_is_salted_differently_for_each_user(tmp_path, start_accounts):
     database_path = tmp_path / "sammy.sqlite"
-    accounts = AccountService(f"sqlite:///{database_path}")
+    accounts = start_accounts(f"sqlite:///{database_path}")
 
     accounts.create_user("test.user", "correct-horse")
     accounts.create_user("test.other", "correct-horse")
@@ -48,8 +48,8 @@ def password_checks(monkeypatch) -> list[str]:
     return checked
 
 
-def test_an_unknown_user_still_costs_a_full_password_check(tmp_path, password_checks):
-    accounts = AccountService(f"sqlite:///{tmp_path / 'sammy.sqlite'}")
+def test_an_unknown_user_still_costs_a_full_password_check(tmp_path, password_checks, start_accounts):
+    accounts = start_accounts(f"sqlite:///{tmp_path / 'sammy.sqlite'}")
 
     with pytest.raises(LoginRefused):
         accounts.log_in("unknown.user", "correct-horse")
@@ -58,11 +58,11 @@ def test_an_unknown_user_still_costs_a_full_password_check(tmp_path, password_ch
     assert password_checks[0].startswith("$argon2id$")
 
 
-def test_an_unknown_user_costs_no_more_than_a_wrong_password(tmp_path, monkeypatch):
+def test_an_unknown_user_costs_no_more_than_a_wrong_password(tmp_path, monkeypatch, start_accounts):
     """The stand-in hash is made once, not on every unknown-user login: making
     it each time would add a second slow Argon2 step, and the extra time
     would reveal which usernames exist."""
-    accounts = AccountService(f"sqlite:///{tmp_path / 'sammy.sqlite'}")
+    accounts = start_accounts(f"sqlite:///{tmp_path / 'sammy.sqlite'}")
     with pytest.raises(LoginRefused):
         accounts.log_in("unknown.user", "correct-horse")  # the stand-in may be made here
 

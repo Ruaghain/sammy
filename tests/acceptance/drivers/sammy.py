@@ -21,6 +21,7 @@ from accounts import (
     SetupAlreadyDone,
     UnknownRole,
     UsernameTaken,
+    migrate,
 )
 from orchestrator_agent import Orchestrator
 
@@ -32,7 +33,11 @@ class SammyDriver:
         # A throwaway database per scenario (see drivers/database.py), so
         # scenarios can't affect each other.
         self._database_url = database_url
-        self._accounts = AccountService(database_url)
+        # As Sammy starts: one engine for the whole database, each package's
+        # tables migrated explicitly, then the services.
+        self._engine = create_engine(database_url)
+        migrate(self._engine)
+        self._accounts = AccountService(self._engine)
         self._orchestrator = Orchestrator(self._accounts)
         self._session: Session | None = None
         self._my_username: str | None = None
@@ -273,6 +278,7 @@ class SammyDriver:
 
     def close(self) -> None:
         self._log.stop()
+        self._engine.dispose()
 
     def logged_in_user(self) -> str | None:
         return self._accounts.user_for(self._session) if self._session else None

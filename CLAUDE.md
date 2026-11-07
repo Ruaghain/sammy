@@ -29,7 +29,7 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
 - `__init__.py` only re-exports the public API. No implementation lives in it.
 - One module per concern: `users.py` (`UserService`), `roles.py`
   (`RoleService`), `sessions.py` (`SessionService`), plus small supporting
-  modules (`errors.py`, `passwords.py`, `audit.py`, `database.py`,
+  modules (`errors.py`, `passwords.py`, `audit.py`, `schema.py`,
   `tables.py`).
 - The lower services own the SQL for their own tables. They take an open
   database connection and never open a transaction, so work that spans them
@@ -38,6 +38,12 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   only public entry point. It opens transactions, works out who is acting and
   whether they're allowed, enforces rules that span services (e.g. someone
   can always manage users and roles) and logs events. It contains no SQL.
+- Sammy has one database. Whatever starts Sammy (CLI, web backend, the
+  acceptance driver) creates the one SQLAlchemy engine and passes it to each
+  package's top-level service; packages never connect by themselves.
+- Each package migrates only its own tables, with its own `migrate(engine)`
+  (e.g. `accounts.migrate`), run explicitly at startup before any of its
+  services are created. Creating a service never changes the schema.
 - Each package keeps its own exceptions in `errors.py`, under one common base
   (e.g. `AccountsError`) so callers can handle them all at once.
 - A helper shared by more than one package (e.g. `audit`) moves to
@@ -83,7 +89,8 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
 - Write queries with SQLAlchemy Core so they run unchanged on both. Nothing
   may be specific to one database.
 - The schema is created and changed only by Alembic migrations, which Sammy
-  applies itself when it starts. `accounts` keeps its migrations in
+  applies itself at startup through each package's `migrate(engine)` (see
+  Code structure). `accounts` keeps its migrations in
   `libs/accounts/src/accounts/migrations/` and its tables in
   `accounts/tables.py`; a change to one needs the other, and a unit test
   fails if they drift apart. Add a migration with

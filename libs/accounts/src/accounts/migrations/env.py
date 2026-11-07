@@ -1,6 +1,6 @@
 """Alembic environment for the accounts schema.
 
-Sammy runs these migrations itself when AccountService starts, passing in an open
+Sammy runs these migrations itself at startup (accounts.migrate), passing in an open
 connection. Run by hand (e.g. to create a new revision), it connects to
 SAMMY_DATABASE_URL instead.
 """

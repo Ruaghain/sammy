@@ -1,0 +1,24 @@
+"""Keeping accounts' own tables up to date.
+
+Sammy has one database, shared by every package; whatever starts Sammy
+creates the engine. Each package migrates only its own tables, explicitly,
+at startup, before any of its services are created: accounts' migrations
+live in migrations/ and record what has run in their own version table.
+"""
+
+from pathlib import Path
+
+from alembic import command
+from alembic.config import Config
+from sqlalchemy import Engine
+
+MIGRATIONS = Path(__file__).parent / "migrations"
+
+
+def migrate(engine: Engine) -> None:
+    """Applies any of accounts' migrations not yet applied to this database."""
+    config = Config()
+    config.set_main_option("script_location", str(MIGRATIONS))
+    with engine.begin() as connection:
+        config.attributes["connection"] = connection
+        command.upgrade(config, "head")

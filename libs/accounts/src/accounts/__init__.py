@@ -1,5 +1,6 @@
 """Sammy's users, roles and login. AccountService is the way in; see
-service.py. The modules alongside it each hold one concern."""
+service.py. Run migrate(engine) at startup, before creating it. The modules
+alongside it each hold one concern."""
 
 from accounts.errors import (
     AccountsError,
@@ -12,6 +13,7 @@ from accounts.errors import (
     UnknownRole,
     UsernameTaken,
 )
+from accounts.schema import migrate
 from accounts.service import AccountService
 from accounts.sessions import Session
 
@@ -27,4 +29,5 @@ __all__ = [
     "SetupAlreadyDone",
     "UnknownRole",
     "UsernameTaken",
+    "migrate",
 ]
