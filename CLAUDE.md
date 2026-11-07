@@ -79,6 +79,27 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   - `username` - unique, used only for logging in.
 - Store only a salted hash of each password, made with a dedicated password
   hashing algorithm. Never log passwords or session tokens (see Logging).
+- Access is controlled by roles. Permissions are fixed in code. A role is a
+  named set of permissions stored in the database. A user can hold any number
+  of roles, including none, and can do whatever any of their roles allows
+  (there are no "deny" permissions). New users start with no roles, so access
+  is always given on purpose.
+- Permissions: `manage users` (create, disable, give and remove roles),
+  `manage roles` (create, change and delete roles), `view agents`,
+  `manage agents` (add agents, edit their descriptions) and
+  `use agent <name>` (talk to that agent).
+- The built-in `admin` role has every permission and can't be changed or
+  deleted. A role that any user still holds can't be deleted.
+- At least one active user must always have `manage users` and
+  `manage roles`, from whichever roles. Anything that would break this
+  (removing a role from someone, changing a role, disabling a user) is
+  refused.
+- Changes to roles and permissions apply straight away, including to users
+  who are already logged in.
+- The orchestrator only offers its model the agents the user is allowed to
+  use, so a refusal never reveals that an agent exists.
+- Refusals reveal nothing extra. Every failed login (wrong password, unknown
+  user, disabled user) gets the same message and takes about as long.
 - Acceptance tests use a throwaway database, set up through the driver layer
   (`tests/acceptance/drivers/database.py`): a new SQLite file per scenario,
   or a fresh PostgreSQL database per scenario when `SAMMY_TEST_DATABASE_URL`
