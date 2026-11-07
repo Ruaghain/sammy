@@ -30,3 +30,21 @@ sessions = Table(
     Column("token_hash", Text, primary_key=True),
     Column("user_id", Integer, ForeignKey("users.id"), nullable=False),
 )
+
+roles = Table(
+    "roles",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("name", Text, nullable=False, unique=True),
+)
+
+# Which users hold which roles. A user can hold any number, including none.
+user_roles = Table(
+    "user_roles",
+    metadata,
+    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True),
+    Column("role_id", Integer, ForeignKey("roles.id"), primary_key=True),
+)
+
+# The built-in role every Sammy has; created by migration 0003.
+ADMIN_ROLE = "admin"

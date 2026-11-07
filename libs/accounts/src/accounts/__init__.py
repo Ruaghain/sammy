@@ -11,7 +11,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from sqlalchemy import Engine, create_engine, delete, insert, select
 
-from accounts.tables import sessions, users
+from accounts.tables import ADMIN_ROLE, roles, sessions, user_roles, users
 
 _MIGRATIONS = Path(__file__).parent / "migrations"
 
@@ -49,13 +49,42 @@ class Accounts:
 
     def create_user(self, username: str, password: str) -> None:
         with self._engine.begin() as database:
-            database.execute(
-                insert(users).values(
-                    public_id=uuid.uuid7(),
-                    username=username,
-                    password_hash=self._password_hasher.hash(password),
-                )
+            self._insert_user(database, username, password)
+
+    def set_up(self, username: str, password: str) -> None:
+        """Creates the first admin: a user holding the built-in admin role."""
+        with self._engine.begin() as database:
+            user_id, public_id = self._insert_user(database, username, password)
+            admin_role_id = database.execute(
+                select(roles.c.id).where(roles.c.name == ADMIN_ROLE)
+            ).scalar_one()
+            database.execute(insert(user_roles).values(user_id=user_id, role_id=admin_role_id))
+        _record("setup created admin", public_id)
+
+    def roles_of(self, username: str) -> set[str]:
+        """The names of the roles this user holds."""
+        with self._engine.connect() as database:
+            return set(
+                database.execute(
+                    select(roles.c.name)
+                    .join(user_roles, user_roles.c.role_id == roles.c.id)
+                    .join(users, users.c.id == user_roles.c.user_id)
+                    .where(users.c.username == username)
+                ).scalars()
             )
+
+    def _insert_user(self, database, username: str, password: str) -> tuple[int, uuid.UUID]:
+        public_id = uuid.uuid7()
+        user_id = database.execute(
+            insert(users)
+            .values(
+                public_id=public_id,
+                username=username,
+                password_hash=self._password_hasher.hash(password),
+            )
+            .returning(users.c.id)
+        ).scalar_one()
+        return user_id, public_id
 
     def log_in(self, username: str, password: str) -> Session:
         with self._engine.connect() as database:
