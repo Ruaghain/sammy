@@ -108,6 +108,11 @@ def test_disabling_a_user_affects_only_that_user():
     pass
 
 
+@scenario("user-management.feature", "A disabled admin doesn't count as someone who can manage users")
+def test_a_disabled_admin_doesnt_count_as_someone_who_can_manage_users():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0

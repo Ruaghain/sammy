@@ -9,7 +9,7 @@ from alembic import command
 from alembic.config import Config
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from sqlalchemy import Engine, create_engine, delete, insert, select, update
+from sqlalchemy import Engine, create_engine, delete, false, insert, select, update
 from sqlalchemy.exc import IntegrityError
 
 from accounts.tables import ADMIN_ROLE, roles, sessions, user_roles, users
@@ -328,12 +328,13 @@ def _can(database, user_id: int, permission: str) -> bool:
 
 
 def _someone_can_manage(database, excluding: int | None = None) -> bool:
-    """Whether at least one user, other than `excluding`, can still manage
-    both users and roles, so Sammy can never be locked out of its own
-    administration."""
+    """Whether at least one active user, other than `excluding`, can still
+    manage both users and roles, so Sammy can never be locked out of its own
+    administration. Disabled users can't log in, so they don't count."""
+    active_users = select(users.c.id).where(users.c.disabled == false())
     return any(
         _can(database, user_id, MANAGE_USERS) and _can(database, user_id, MANAGE_ROLES)
-        for user_id in database.execute(select(users.c.id)).scalars()
+        for user_id in database.execute(active_users).scalars()
         if user_id != excluding
     )
 
