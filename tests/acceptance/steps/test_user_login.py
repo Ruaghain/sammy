@@ -63,6 +63,7 @@ def test_a_refused_login_for_an_unknown_username_is_recorded_without_it():
 
 @pytest.mark.built_examples(
     {"leaving": "test.user", "staying": "test.other"},
+    {"leaving": "test.other", "staying": "test.user"},
 )
 @scenario("user-login.feature", "Logging out is recorded for the person who logged out")
 def test_logging_out_is_recorded_for_the_person_who_logged_out():
