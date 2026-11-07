@@ -19,6 +19,7 @@ _MIGRATIONS = Path(__file__).parent / "migrations"
 # Permissions are fixed in code (see CLAUDE.md, Stored data). The built-in
 # admin role has every one of them.
 MANAGE_USERS = "manage users"
+MANAGE_ROLES = "manage roles"
 
 # Logs name users only by public_id: never by username, and never with a
 # password or session token (see CLAUDE.md, Logging).
@@ -57,6 +58,11 @@ class LoginRequired(Exception):
 
 class PermissionDenied(Exception):
     """Raised when someone tries something none of their roles allows."""
+
+
+class LastManagerRequired(Exception):
+    """Raised when a change would leave no active user able to manage both
+    users and roles."""
 
 
 class Accounts:
@@ -131,6 +137,10 @@ class Accounts:
                     user_roles.c.user_id == user.id, user_roles.c.role_id == role_id
                 )
             )
+            # Checked after the change, inside the transaction: raising rolls
+            # the removal back.
+            if not _someone_can_manage(database):
+                raise LastManagerRequired
         _record("role removed", user.public_id, actor_public_id=acting.public_id, role=role)
 
     def disable_as(self, actor: Session | None, username: str) -> None:
@@ -267,6 +277,15 @@ def _can(database, user_id: int, permission: str) -> bool:
             .where(user_roles.c.user_id == user_id, roles.c.name == ADMIN_ROLE)
         ).first()
         is not None
+    )
+
+
+def _someone_can_manage(database) -> bool:
+    """Whether at least one user can still manage both users and roles, so
+    Sammy can never be locked out of its own administration."""
+    return any(
+        _can(database, user_id, MANAGE_USERS) and _can(database, user_id, MANAGE_ROLES)
+        for user_id in database.execute(select(users.c.id)).scalars()
     )
 
 

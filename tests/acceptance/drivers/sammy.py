@@ -12,6 +12,7 @@ from sqlalchemy import MetaData, create_engine, func, select
 
 from accounts import (
     Accounts,
+    LastManagerRequired,
     LoginRefused,
     LoginRequired,
     PermissionDenied,
@@ -39,6 +40,7 @@ class SammyDriver:
         self._username_taken = False
         self._role_unknown = False
         self._permission_denied = False
+        self._last_manager_protected = False
         # Passwords of the users this driver created, so it can act as them.
         self._passwords: dict[str, str] = {}
         self._probes = 0
@@ -94,7 +96,13 @@ class SammyDriver:
 
     def remove_role(self, username: str, role: str) -> None:
         """Removes a role from a user as "me"."""
-        self._accounts.remove_role_as(self._session, username, role)
+        try:
+            self._accounts.remove_role_as(self._session, username, role)
+        except LastManagerRequired:
+            self._last_manager_protected = True
+
+    def last_manager_was_protected(self) -> bool:
+        return self._last_manager_protected
 
     def role_was_unknown(self) -> bool:
         return self._role_unknown
