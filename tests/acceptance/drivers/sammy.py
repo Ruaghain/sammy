@@ -93,6 +93,8 @@ class SammyDriver:
             self._accounts.disable_as(self._session, username)
         except PermissionDenied:
             self._permission_denied = True
+        except LastManagerRequired:
+            self._last_manager_protected = True
 
     def remove_role(self, username: str, role: str) -> None:
         """Removes a role from a user as "me"."""
@@ -168,6 +170,10 @@ class SammyDriver:
             return False
         self._accounts.log_out(session)
         return True
+
+    def can_log_in_with_their_password(self, username: str) -> bool:
+        """can_log_in, using the password this driver gave the user."""
+        return self.can_log_in(username, self._passwords[username])
 
     def roles_of(self, username: str) -> set[str]:
         return self._accounts.roles_of(username)
