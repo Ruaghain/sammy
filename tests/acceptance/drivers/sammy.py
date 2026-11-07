@@ -13,13 +13,14 @@ from sqlalchemy import MetaData, create_engine, func, select
 from accounts import (
     Accounts,
     LoginRefused,
+    LoginRequired,
     PermissionDenied,
     Session,
     SetupAlreadyDone,
     UnknownRole,
     UsernameTaken,
 )
-from orchestrator_agent import LoginRequired, Orchestrator
+from orchestrator_agent import Orchestrator
 
 
 class SammyDriver:
@@ -58,6 +59,9 @@ class SammyDriver:
             return
         except PermissionDenied:
             self._permission_denied = True
+            return
+        except LoginRequired:
+            self._asked_to_log_in = True
             return
         self._username_taken = False
         self._passwords[username] = password
