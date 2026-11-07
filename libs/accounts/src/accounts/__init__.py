@@ -1,3 +1,4 @@
+import logging
 import secrets
 import uuid
 from dataclasses import dataclass, field
@@ -13,6 +14,10 @@ from sqlalchemy import Engine, create_engine, delete, insert, select
 from accounts.tables import sessions, users
 
 _MIGRATIONS = Path(__file__).parent / "migrations"
+
+# Logs name users only by public_id: never by username, and never with a
+# password or session token (see CLAUDE.md, Logging).
+_log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -55,7 +60,9 @@ class Accounts:
     def log_in(self, username: str, password: str) -> Session:
         with self._engine.connect() as database:
             user = database.execute(
-                select(users.c.id, users.c.password_hash).where(users.c.username == username)
+                select(users.c.id, users.c.public_id, users.c.password_hash).where(
+                    users.c.username == username
+                )
             ).one_or_none()
         # An unknown username is still checked against a stand-in hash, so it
         # takes as long to refuse as a wrong password and the response time
@@ -72,6 +79,7 @@ class Accounts:
             database.execute(
                 insert(sessions).values(token_hash=_token_hash(session), user_id=user.id)
             )
+        _record("login succeeded", user.public_id)
         return session
 
     def user_for(self, session: Session) -> str | None:
@@ -96,6 +104,14 @@ class Accounts:
             database.execute(
                 delete(sessions).where(sessions.c.token_hash == _token_hash(session))
             )
+
+
+def _record(event: str, public_id: uuid.UUID) -> None:
+    """Logs an event about a user. The event and public id are also attached
+    as fields, so they can be found without parsing the message."""
+    _log.info(
+        "%s: user %s", event, public_id, extra={"event": event, "public_id": str(public_id)}
+    )
 
 
 def _migrate(engine: Engine) -> None:
