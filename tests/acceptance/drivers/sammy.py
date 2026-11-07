@@ -27,16 +27,35 @@ class SammyDriver:
         self._login_refused = False
         self._asked_to_log_in = False
         self._setup_refused = False
+        # Passwords of the users this driver created, so it can act as them.
+        self._passwords: dict[str, str] = {}
+        self._probes = 0
         # Sessions of other people, by username, for scenarios with several
         # people logged in at once.
         self._sessions_by_user: dict[str, Session] = {}
 
     def add_user(self, username: str, password: str) -> None:
         self._accounts.create_user(username, password)
+        self._passwords[username] = password
 
     def create_user(self, username: str, password: str) -> None:
         """Creates a user as "me", whoever I'm logged in as."""
         self._accounts.create_user_as(self._session, username, password)
+        self._passwords[username] = password
+
+    def give_role(self, username: str, role: str) -> None:
+        """Gives a user a role as "me"."""
+        self._accounts.give_role_as(self._session, username, role)
+
+    def can_create_users(self, username: str) -> bool:
+        """Logs in as this user on the side and tries to create a user."""
+        session = self._accounts.log_in(username, self._passwords[username])
+        try:
+            self._probes += 1
+            self._accounts.create_user_as(session, f"test.probe{self._probes}", "correct-horse")
+            return True
+        finally:
+            self._accounts.log_out(session)
 
     def log_in(self, username: str, password: str) -> None:
         try:
@@ -67,6 +86,7 @@ class SammyDriver:
     def run_setup(self, username: str, password: str) -> None:
         try:
             self._accounts.set_up(username, password)
+            self._passwords[username] = password
             self._setup_refused = False
         except SetupAlreadyDone:
             self._setup_refused = True
@@ -130,16 +150,17 @@ class SammyDriver:
             engine.dispose()
         return "\n".join(values + self._log.lines())
 
-    def has_recorded(self, event: str, username: str, by: str | None = None) -> bool:
-        """Whether Sammy has logged this event for this user, and, if `by` is
-        given, that this person did it. Logs name users only by public id, so
-        the usernames are looked up first."""
+    def has_recorded(self, event: str, username: str, by: str | None = None, **fields) -> bool:
+        """Whether Sammy has logged this event for this user; if `by` is given,
+        that this person did it; and that any other `fields` match. Logs name
+        users only by public id, so the usernames are looked up first."""
         public_id = self._accounts.public_id(username)
         actor_id = self._accounts.public_id(by) if by is not None else None
         return public_id is not None and any(
             getattr(record, "event", None) == event
             and getattr(record, "public_id", None) == str(public_id)
             and (by is None or getattr(record, "actor_public_id", None) == str(actor_id))
+            and all(getattr(record, name, None) == value for name, value in fields.items())
             for record in self._log.records()
         )
 
