@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from accounts.audit import record as _record
 from accounts.audit import record_about_nobody
 from accounts.errors import (
+    AccountsError,
     LastManagerRequired,
     LoginRefused,
     LoginRequired,
@@ -27,6 +28,7 @@ from accounts.tables import ADMIN_ROLE, roles, sessions, user_roles, users
 
 __all__ = [
     "Accounts",
+    "AccountsError",
     "LastManagerRequired",
     "LoginRefused",
     "LoginRequired",
