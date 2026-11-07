@@ -1,10 +1,10 @@
-from accounts import Accounts, LoginRequired, Session
+from accounts import AccountService, LoginRequired, Session
 
 __all__ = ["LoginRequired", "Orchestrator"]
 
 
 class Orchestrator:
-    def __init__(self, accounts: Accounts):
+    def __init__(self, accounts: AccountService):
         self._accounts = accounts
 
     def handle(self, session: Session | None, message: str) -> None:

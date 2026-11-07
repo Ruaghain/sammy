@@ -23,6 +23,30 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   whichever process runs them (CLI now, `web/`'s backend later), not
   separately deployed services, until something concrete forces a split.
 
+## Code structure
+
+`libs/accounts` is the model; new packages follow the same shape.
+- `__init__.py` only re-exports the public API. No implementation lives in it.
+- One module per concern: `users.py` (`UserService`), `roles.py`
+  (`RoleService`), `sessions.py` (`SessionService`), plus small supporting
+  modules (`errors.py`, `passwords.py`, `audit.py`, `database.py`,
+  `tables.py`).
+- The lower services own the SQL for their own tables. They take an open
+  database connection and never open a transaction, so work that spans them
+  succeeds or fails together. There is no separate DAO/repository layer.
+- One top-level service per package (`AccountService` in `service.py`) is the
+  only public entry point. It opens transactions, works out who is acting and
+  whether they're allowed, enforces rules that span services (e.g. someone
+  can always manage users and roles) and logs events. It contains no SQL.
+- Each package keeps its own exceptions in `errors.py`, under one common base
+  (e.g. `AccountsError`) so callers can handle them all at once.
+- A helper shared by more than one package (e.g. `audit`) moves to
+  `libs/core` once a second package needs it, not before.
+- Unit test files are named after the module they cover (`test_users.py`,
+  `test_passwords.py`, ...) and exist only for what acceptance scenarios can't
+  see: storage formats, timing, migrations. There's no unit test file per
+  module by default.
+
 ## Model configuration
 
 - Configured through environment variables, never hardcoded:
@@ -59,7 +83,7 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
 - Write queries with SQLAlchemy Core so they run unchanged on both. Nothing
   may be specific to one database.
 - The schema is created and changed only by Alembic migrations, which Sammy
-  applies itself when it starts. Accounts keeps its migrations in
+  applies itself when it starts. `accounts` keeps its migrations in
   `libs/accounts/src/accounts/migrations/` and its tables in
   `accounts/tables.py`; a change to one needs the other, and a unit test
   fails if they drift apart. Add a migration with

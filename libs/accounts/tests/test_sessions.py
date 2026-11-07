@@ -1,11 +1,11 @@
 import sqlite3
 
-from accounts import Accounts
+from accounts import AccountService
 
 
 def logged_in(tmp_path):
     database_path = tmp_path / "sammy.sqlite"
-    accounts = Accounts(f"sqlite:///{database_path}")
+    accounts = AccountService(f"sqlite:///{database_path}")
     accounts.create_user("test.user", "correct-horse")
     return database_path, accounts.log_in("test.user", "correct-horse")
 
