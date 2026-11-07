@@ -18,6 +18,11 @@ def test_a_new_user_can_log_in_and_starts_with_no_roles():
     pass
 
 
+@scenario("user-management.feature", "An admin gives a user a role")
+def test_an_admin_gives_a_user_a_role():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0
@@ -77,3 +82,18 @@ def has_no_roles(sammy: SammyDriver, username: str):
 @then(parsers.parse('Sammy has recorded that "{actor}" created "{username}"'))
 def sammy_has_recorded_that_someone_created_a_user(sammy: SammyDriver, actor: str, username: str):
     assert sammy.has_recorded("user created", username, by=actor)
+
+
+@when(parsers.parse('I give "{username}" the "{role}" role'))
+def i_give_the_role(sammy: SammyDriver, username: str, role: str):
+    sammy.give_role(username, role)
+
+
+@then(parsers.parse('"{username}" can create users'))
+def can_create_users(sammy: SammyDriver, username: str):
+    assert sammy.can_create_users(username)
+
+
+@then(parsers.parse('Sammy has recorded that "{actor}" gave "{username}" the "{role}" role'))
+def sammy_has_recorded_that_someone_gave_a_role(sammy: SammyDriver, actor: str, username: str, role: str):
+    assert sammy.has_recorded("role given", username, by=actor, role=role)

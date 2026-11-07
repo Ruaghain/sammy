@@ -63,6 +63,18 @@ class Accounts:
             _, public_id = self._insert_user(database, username, password)
         _record("user created", public_id, actor_public_id=actor_public_id)
 
+    def give_role_as(self, actor: Session, username: str, role: str) -> None:
+        """Gives a user a role on behalf of whoever holds `actor`, and records
+        who did it."""
+        with self._engine.begin() as database:
+            actor_public_id = _session_user(database, actor).public_id
+            user = database.execute(
+                select(users.c.id, users.c.public_id).where(users.c.username == username)
+            ).one()
+            role_id = database.execute(select(roles.c.id).where(roles.c.name == role)).scalar_one()
+            database.execute(insert(user_roles).values(user_id=user.id, role_id=role_id))
+        _record("role given", user.public_id, actor_public_id=actor_public_id, role=role)
+
     def set_up(self, username: str, password: str) -> None:
         """Creates the first admin: a user holding the built-in admin role.
         Only allowed while Sammy has no users at all."""
@@ -176,16 +188,20 @@ def _record(
     public_id: uuid.UUID,
     level: int = logging.INFO,
     actor_public_id: uuid.UUID | None = None,
+    role: str | None = None,
 ) -> None:
-    """Logs an event about a user, and who did it if someone else did. The
-    event and public ids are also attached as fields, so they can be found
-    without parsing the message."""
+    """Logs an event about a user, who did it if someone else did, and which
+    role it concerned, if any. These are also attached as fields, so they can
+    be found without parsing the message."""
     fields = {"event": event, "public_id": str(public_id)}
-    if actor_public_id is None:
-        _log.log(level, "%s: user %s", event, public_id, extra=fields)
-    else:
+    message, args = "%s: user %s", [event, public_id]
+    if role is not None:
+        fields["role"] = role
+        message, args = message + " role %s", [*args, role]
+    if actor_public_id is not None:
         fields["actor_public_id"] = str(actor_public_id)
-        _log.log(level, "%s: user %s by user %s", event, public_id, actor_public_id, extra=fields)
+        message, args = message + " by user %s", [*args, actor_public_id]
+    _log.log(level, message, *args, extra=fields)
 
 
 def _migrate(engine: Engine) -> None:
