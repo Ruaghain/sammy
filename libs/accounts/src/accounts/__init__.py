@@ -65,6 +65,10 @@ class LastManagerRequired(Exception):
     users and roles."""
 
 
+class RoleAlreadyHeld(Exception):
+    """Raised when giving someone a role they already hold."""
+
+
 class Accounts:
     def __init__(self, database_url: str):
         """database_url is a SQLAlchemy URL: sqlite:///path/to/sammy.sqlite or
@@ -99,21 +103,25 @@ class Accounts:
 
     def give_role_as(self, actor: Session | None, username: str, role: str) -> None:
         """Gives a user a role on behalf of whoever holds `actor`, and records
-        who did it."""
-        with self._engine.begin() as database:
-            acting = _acting(database, actor)
-            # Checked first, so someone without permission can't learn which
-            # users or roles exist from the refusal they get.
-            _require(database, acting, MANAGE_USERS)
-            user = database.execute(
-                select(users.c.id, users.c.public_id).where(users.c.username == username)
-            ).one()
-            role_id = database.execute(
-                select(roles.c.id).where(roles.c.name == role)
-            ).scalar_one_or_none()
-            if role_id is None:
-                raise UnknownRole
-            database.execute(insert(user_roles).values(user_id=user.id, role_id=role_id))
+        who did it. Refused if they already hold it."""
+        try:
+            with self._engine.begin() as database:
+                acting = _acting(database, actor)
+                # Checked first, so someone without permission can't learn which
+                # users or roles exist from the refusal they get.
+                _require(database, acting, MANAGE_USERS)
+                user = database.execute(
+                    select(users.c.id, users.c.public_id).where(users.c.username == username)
+                ).one()
+                role_id = database.execute(
+                    select(roles.c.id).where(roles.c.name == role)
+                ).scalar_one_or_none()
+                if role_id is None:
+                    raise UnknownRole
+                database.execute(insert(user_roles).values(user_id=user.id, role_id=role_id))
+        except IntegrityError:
+            # user_roles' primary key is the check, as with usernames (#71).
+            raise RoleAlreadyHeld from None
         _record("role given", user.public_id, actor_public_id=acting.public_id, role=role)
 
     def remove_role_as(self, actor: Session | None, username: str, role: str) -> None:

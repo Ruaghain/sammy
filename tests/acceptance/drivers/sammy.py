@@ -16,6 +16,7 @@ from accounts import (
     LoginRefused,
     LoginRequired,
     PermissionDenied,
+    RoleAlreadyHeld,
     Session,
     SetupAlreadyDone,
     UnknownRole,
@@ -41,6 +42,7 @@ class SammyDriver:
         self._role_unknown = False
         self._permission_denied = False
         self._last_manager_protected = False
+        self._role_already_held = False
         # Passwords of the users this driver created, so it can act as them.
         self._passwords: dict[str, str] = {}
         self._probes = 0
@@ -84,6 +86,8 @@ class SammyDriver:
             self._role_unknown = False
         except UnknownRole:
             self._role_unknown = True
+        except RoleAlreadyHeld:
+            self._role_already_held = True
         except PermissionDenied:
             self._permission_denied = True
 
@@ -105,6 +109,9 @@ class SammyDriver:
 
     def last_manager_was_protected(self) -> bool:
         return self._last_manager_protected
+
+    def role_was_already_held(self) -> bool:
+        return self._role_already_held
 
     def role_was_unknown(self) -> bool:
         return self._role_unknown
