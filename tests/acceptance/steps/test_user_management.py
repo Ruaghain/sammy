@@ -83,6 +83,11 @@ def test_disabling_a_user_ends_their_session():
     pass
 
 
+@scenario("user-management.feature", "A user can't be given a role they already hold")
+def test_a_user_cant_be_given_a_role_they_already_hold():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0
@@ -256,3 +261,14 @@ def is_no_longer_logged_in(sammy: SammyDriver, username: str):
 @then(parsers.parse('Sammy has recorded that "{actor}" disabled "{username}"'))
 def sammy_has_recorded_that_someone_disabled_a_user(sammy: SammyDriver, actor: str, username: str):
     assert sammy.has_recorded("user disabled", username, by=actor)
+
+
+@given(parsers.parse('"{username}" has been given the "{role}" role'))
+def has_been_given_the_role(sammy: SammyDriver, username: str, role: str):
+    sammy.give_role(username, role)
+    assert role in sammy.roles_of(username)
+
+
+@then(parsers.parse('I am told "{username}" already has the "{role}" role'))
+def i_am_told_they_already_have_the_role(sammy: SammyDriver, username: str, role: str):
+    assert sammy.role_was_already_held()
