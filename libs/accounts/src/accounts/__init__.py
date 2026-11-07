@@ -103,9 +103,17 @@ class Accounts:
 
     def log_out(self, session: Session) -> None:
         with self._engine.begin() as database:
+            public_id = database.execute(
+                select(users.c.public_id)
+                .join(sessions, sessions.c.user_id == users.c.id)
+                .where(sessions.c.token_hash == _token_hash(session))
+            ).scalar_one_or_none()
             database.execute(
                 delete(sessions).where(sessions.c.token_hash == _token_hash(session))
             )
+        # A session that's already gone has nobody to name.
+        if public_id is not None:
+            _record("logged out", public_id)
 
 
 def _record(event: str, public_id: uuid.UUID, level: int = logging.INFO) -> None:
