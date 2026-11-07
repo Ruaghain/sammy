@@ -39,6 +39,10 @@ def test_a_user_cant_be_given_a_role_that_doesnt_exist():
         "action": 'create the user "test.new" with the password "correct-horse"',
         "unchanged": 'the user "test.new" doesn\'t exist',
     },
+    {
+        "action": 'give "test.other" the "admin" role',
+        "unchanged": '"test.other" has no roles',
+    },
 )
 @scenario("user-management.feature", "Only users who can manage users can change them")
 def test_only_users_who_can_manage_users_can_change_them():

@@ -78,6 +78,8 @@ class SammyDriver:
             self._role_unknown = False
         except UnknownRole:
             self._role_unknown = True
+        except PermissionDenied:
+            self._permission_denied = True
 
     def role_was_unknown(self) -> bool:
         return self._role_unknown
