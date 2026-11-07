@@ -44,3 +44,18 @@ Feature: User login
     Given "test.user" and "test.other" are both logged in
     When "test.user" logs out
     Then "test.other" is still logged in
+
+Scenario: A successful login is recorded
+  Given a user "test.user" with the password "correct-horse"
+  When I log in as "test.user" with the password "correct-horse"
+  Then Sammy has recorded that "test.user" logged in
+
+Scenario: A refused login is recorded
+  Given a user "test.user" with the password "correct-horse"
+  When I log in as "test.user" with the password "wrong-password"
+  Then Sammy has recorded that a login as "test.user" was refused
+
+Scenario: Logging out is recorded
+  Given I am logged in as "test.user"
+  When I log out
+  Then Sammy has recorded that "test.user" logged out
