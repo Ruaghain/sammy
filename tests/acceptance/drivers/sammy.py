@@ -89,6 +89,16 @@ class SammyDriver:
             engine.dispose()
         return "\n".join(values + self._log.lines())
 
+    def has_recorded(self, event: str, username: str) -> bool:
+        """Whether Sammy has logged this event for this user. Logs name users
+        only by public id, so the username is looked up first."""
+        public_id = self._accounts.public_id(username)
+        return public_id is not None and any(
+            getattr(record, "event", None) == event
+            and getattr(record, "public_id", None) == str(public_id)
+            for record in self._log.records()
+        )
+
     def close(self) -> None:
         self._log.stop()
 
@@ -120,6 +130,9 @@ class _LogRecorder(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         if record.name.split(".")[0] not in self._TEST_TOOLING:
             self._records.append(record)
+
+    def records(self) -> list[logging.LogRecord]:
+        return list(self._records)
 
     def lines(self) -> list[str]:
         formatter = logging.Formatter("%(name)s %(levelname)s %(message)s")
