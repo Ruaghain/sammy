@@ -10,6 +10,7 @@ from alembic.config import Config
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from sqlalchemy import Engine, create_engine, delete, insert, select
+from sqlalchemy.exc import IntegrityError
 
 from accounts.tables import ADMIN_ROLE, roles, sessions, user_roles, users
 
@@ -37,6 +38,10 @@ class SetupAlreadyDone(Exception):
     """Raised when setup is run on a Sammy that already has users."""
 
 
+class UsernameTaken(Exception):
+    """Raised when creating a user whose username is already in use."""
+
+
 class Accounts:
     def __init__(self, database_url: str):
         """database_url is a SQLAlchemy URL: sqlite:///path/to/sammy.sqlite or
@@ -58,9 +63,14 @@ class Accounts:
     def create_user_as(self, actor: Session, username: str, password: str) -> None:
         """Creates a user on behalf of whoever holds `actor`, and records who
         did it. The new user has no roles."""
-        with self._engine.begin() as database:
-            actor_public_id = _session_user(database, actor).public_id
-            _, public_id = self._insert_user(database, username, password)
+        try:
+            with self._engine.begin() as database:
+                actor_public_id = _session_user(database, actor).public_id
+                _, public_id = self._insert_user(database, username, password)
+        except IntegrityError:
+            # The unique constraint on username is the check, so two requests
+            # at once can't both create the same username.
+            raise UsernameTaken from None
         _record("user created", public_id, actor_public_id=actor_public_id)
 
     def give_role_as(self, actor: Session, username: str, role: str) -> None:
