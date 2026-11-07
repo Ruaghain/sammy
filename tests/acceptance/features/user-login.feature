@@ -45,17 +45,34 @@ Feature: User login
     When "test.user" logs out
     Then "test.other" is still logged in
 
-Scenario: A successful login is recorded
-  Given a user "test.user" with the password "correct-horse"
-  When I log in as "test.user" with the password "correct-horse"
-  Then Sammy has recorded that "test.user" logged in
+  Scenario: A successful login is recorded
+    Given a user "test.user" with the password "correct-horse"
+    When I log in as "test.user" with the password "correct-horse"
+    Then Sammy has recorded that "test.user" logged in
 
-Scenario: A refused login is recorded
-  Given a user "test.user" with the password "correct-horse"
-  When I log in as "test.user" with the password "wrong-password"
-  Then Sammy has recorded that a login as "test.user" was refused
+  Scenario: A refused login is recorded
+    Given a user "test.user" with the password "correct-horse"
+    When I log in as "test.user" with the password "wrong-password"
+    Then Sammy has recorded that a login as "test.user" was refused
 
-Scenario: Logging out is recorded
-  Given I am logged in as "test.user"
-  When I log out
-  Then Sammy has recorded that "test.user" logged out
+  Scenario: Logging out is recorded
+    Given I am logged in as "test.user"
+    When I log out
+    Then Sammy has recorded that "test.user" logged out
+
+  Scenario: A refused login for an unknown username is recorded without it
+    Given a user "test.user" with the password "correct-horse"
+    When I log in as "unknown.user" with the password "correct-horse"
+    Then Sammy has recorded that a login was refused for an unknown user
+    And nothing Sammy has logged contains "unknown.user"
+
+  Scenario Outline: Logging out is recorded for the person who logged out
+    Given "test.user" and "test.other" are both logged in
+    When "<leaving>" logs out
+    Then Sammy has recorded that "<leaving>" logged out
+    And Sammy has not recorded that "<staying>" logged out
+
+    Examples:
+      | leaving    | staying    |
+      | test.user  | test.other |
+      | test.other | test.user  |
