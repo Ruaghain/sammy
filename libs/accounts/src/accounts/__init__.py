@@ -91,6 +91,9 @@ class Accounts:
         who did it."""
         with self._engine.begin() as database:
             acting = _session_user(database, actor)
+            # Checked first, so someone without permission can't learn which
+            # users or roles exist from the refusal they get.
+            _require(database, acting, MANAGE_USERS)
             user = database.execute(
                 select(users.c.id, users.c.public_id).where(users.c.username == username)
             ).one()
