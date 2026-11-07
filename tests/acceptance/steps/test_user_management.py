@@ -93,6 +93,11 @@ def test_giving_a_role_affects_only_that_user():
     pass
 
 
+@scenario("user-management.feature", "Someone else being an admin doesn't let me manage users")
+def test_someone_else_being_an_admin_doesnt_let_me_manage_users():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0
@@ -277,3 +282,9 @@ def has_been_given_the_role(sammy: SammyDriver, username: str, role: str):
 @then(parsers.parse('I am told "{username}" already has the "{role}" role'))
 def i_am_told_they_already_have_the_role(sammy: SammyDriver, username: str, role: str):
     assert sammy.role_was_already_held()
+
+
+@given(parsers.parse('a user "{username}" with the "{role}" role'))
+def a_user_with_the_role(sammy: SammyDriver, username: str, role: str):
+    sammy.add_user(username, "correct-horse")
+    sammy.has_been_given_role(username, role)
