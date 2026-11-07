@@ -98,6 +98,11 @@ def test_someone_else_being_an_admin_doesnt_let_me_manage_users():
     pass
 
 
+@scenario("user-management.feature", "Removing a role affects only that user")
+def test_removing_a_role_affects_only_that_user():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0
@@ -288,3 +293,8 @@ def i_am_told_they_already_have_the_role(sammy: SammyDriver, username: str, role
 def a_user_with_the_role(sammy: SammyDriver, username: str, role: str):
     sammy.add_user(username, "correct-horse")
     sammy.has_been_given_role(username, role)
+
+
+@then(parsers.parse('"{username}" can still create users'))
+def can_still_create_users(sammy: SammyDriver, username: str):
+    assert sammy.can_create_users(username)
