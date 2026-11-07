@@ -50,6 +50,11 @@ class UnknownRole(Exception):
     """Raised when a role is named that doesn't exist."""
 
 
+class LoginRequired(Exception):
+    """Raised when someone who isn't logged in tries something that needs it,
+    such as talking to Sammy or managing users."""
+
+
 class PermissionDenied(Exception):
     """Raised when someone tries something none of their roles allows."""
 
@@ -72,12 +77,12 @@ class Accounts:
         with self._engine.begin() as database:
             self._insert_user(database, username, password)
 
-    def create_user_as(self, actor: Session, username: str, password: str) -> None:
+    def create_user_as(self, actor: Session | None, username: str, password: str) -> None:
         """Creates a user on behalf of whoever holds `actor`, and records who
         did it. The new user has no roles."""
         try:
             with self._engine.begin() as database:
-                acting = _session_user(database, actor)
+                acting = _acting(database, actor)
                 _require(database, acting, MANAGE_USERS)
                 _, public_id = self._insert_user(database, username, password)
         except IntegrityError:
@@ -86,11 +91,11 @@ class Accounts:
             raise UsernameTaken from None
         _record("user created", public_id, actor_public_id=acting.public_id)
 
-    def give_role_as(self, actor: Session, username: str, role: str) -> None:
+    def give_role_as(self, actor: Session | None, username: str, role: str) -> None:
         """Gives a user a role on behalf of whoever holds `actor`, and records
         who did it."""
         with self._engine.begin() as database:
-            acting = _session_user(database, actor)
+            acting = _acting(database, actor)
             # Checked first, so someone without permission can't learn which
             # users or roles exist from the refusal they get.
             _require(database, acting, MANAGE_USERS)
@@ -105,10 +110,10 @@ class Accounts:
             database.execute(insert(user_roles).values(user_id=user.id, role_id=role_id))
         _record("role given", user.public_id, actor_public_id=acting.public_id, role=role)
 
-    def disable_as(self, actor: Session, username: str) -> None:
+    def disable_as(self, actor: Session | None, username: str) -> None:
         """Disables a user on behalf of whoever holds `actor`."""
         with self._engine.begin() as database:
-            _require(database, _session_user(database, actor), MANAGE_USERS)
+            _require(database, _acting(database, actor), MANAGE_USERS)
         # What disabling does is specified by later scenarios (#79, #81).
         raise NotImplementedError("Disabling users isn't built yet")
 
@@ -218,6 +223,15 @@ def _session_user(database, session: Session):
         .join(sessions, sessions.c.user_id == users.c.id)
         .where(sessions.c.token_hash == _token_hash(session))
     ).one_or_none()
+
+
+def _acting(database, actor: Session | None):
+    """Who is acting, from their session. Refuses if they aren't logged in:
+    no session, or one that has been logged out."""
+    acting = _session_user(database, actor) if actor is not None else None
+    if acting is None:
+        raise LoginRequired
+    return acting
 
 
 def _can(database, user_id: int, permission: str) -> bool:

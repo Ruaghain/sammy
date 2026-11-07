@@ -1,7 +1,7 @@
 """Steps shared by more than one feature. Steps used by a single feature live
 in that feature's test_<name>.py."""
 
-from pytest_bdd import given, parsers, when
+from pytest_bdd import given, parsers, then, when
 
 from drivers.sammy import SammyDriver
 
@@ -16,3 +16,13 @@ def a_user_with_the_password(sammy: SammyDriver, username: str, password: str):
 @when(parsers.re(r'I log in as "(?P<username>[^"]+)" with the password "(?P<password>[^"]*)"'))
 def i_log_in(sammy: SammyDriver, username: str, password: str):
     sammy.log_in(username, password)
+
+
+@given("I am not logged in")
+def given_i_am_not_logged_in(sammy: SammyDriver):
+    sammy.ensure_logged_out()
+
+
+@then("I am asked to log in")
+def i_am_asked_to_log_in(sammy: SammyDriver):
+    assert sammy.was_asked_to_log_in()

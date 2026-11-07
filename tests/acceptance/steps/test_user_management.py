@@ -53,6 +53,11 @@ def test_only_users_who_can_manage_users_can_change_them():
     pass
 
 
+@scenario("user-management.feature", "Managing users requires logging in")
+def test_managing_users_requires_logging_in():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0

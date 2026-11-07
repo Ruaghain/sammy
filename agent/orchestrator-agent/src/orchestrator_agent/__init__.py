@@ -1,8 +1,6 @@
-from accounts import Accounts, Session
+from accounts import Accounts, LoginRequired, Session
 
-
-class LoginRequired(Exception):
-    """Raised when someone who isn't logged in tries to talk to Sammy."""
+__all__ = ["LoginRequired", "Orchestrator"]
 
 
 class Orchestrator:
