@@ -4,9 +4,7 @@ import argparse
 import logging
 import sys
 
-from sammy.config import ConfigurationError, load_settings
-from sammy.logs import configure_logging
-from sammy.startup import start
+from sammy import ConfigurationError, configure_logging, load_settings, start
 
 _log = logging.getLogger("sammy")
 
@@ -27,7 +25,7 @@ def main(argv: list[str] | None = None) -> int:
     configure_logging(settings)
 
     if arguments.command == "migrate":
-        sammy = start(settings)
+        sammy = start(settings.database_url)
         sammy.close()
         _log.info("database up to date", extra={"event": "database migrated"})
         print("Sammy's database is up to date.")

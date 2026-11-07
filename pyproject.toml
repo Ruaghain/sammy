@@ -3,6 +3,7 @@ members = [
     "libs/accounts",
     "agent/orchestrator-agent",
     "cli",
+    "libs/sammy",
 ]
 
 [dependency-groups]

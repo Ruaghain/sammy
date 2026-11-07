@@ -7,6 +7,7 @@ members = [
     "accounts",
     "orchestrator-agent",
     "sammy",
+    "sammy-cli",
 ]
 
 [manifest.dependency-groups]
@@ -925,7 +926,7 @@ wheels = [
 [[package]]
 name = "sammy"
 version = "0.1.0"
-source = { editable = "cli" }
+source = { editable = "libs/sammy" }
 dependencies = [
     { name = "accounts" },
     { name = "orchestrator-agent" },
@@ -940,6 +941,17 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.2.4" },
     { name = "sqlalchemy", specifier = ">=2.1.6" },
 ]
+
+[[package]]
+name = "sammy-cli"
+version = "0.1.0"
+source = { editable = "cli" }
+dependencies = [
+    { name = "sammy" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "sammy", editable = "libs/sammy" }]
 
 [[package]]
 name = "six"

@@ -55,8 +55,10 @@ agent/<name>/         one package per agent (orchestrator-agent first)
   tests/              that agent's unit tests
 libs/accounts/        users, roles and login
   tests/              unit tests for accounts
-cli/                  the sammy command: starts Sammy (settings, logging, database, services)
-  tests/              unit tests for the entry point
+libs/sammy/           how Sammy starts: settings, logging, database and services
+  tests/              unit tests for settings and logging
+cli/                  the sammy command
+  tests/              unit tests for the command
 web/                  from-scratch web UI and server (later)
 tests/acceptance/
   features/           Gherkin .feature files, written in natural language
@@ -80,7 +82,7 @@ uv run pytest                  # run all tests
 uv run pytest tests/acceptance # acceptance tests only
 uv run pytest agent            # agent unit tests only
 uv run pytest libs             # shared library unit tests only
-uv run pytest cli              # entry-point unit tests only
+uv run pytest cli              # the sammy command's unit tests only
 uv run pytest tools            # tooling tests only
 ```
 
