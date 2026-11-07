@@ -1,4 +1,5 @@
 import secrets
+import uuid
 from dataclasses import dataclass, field
 from hashlib import sha256
 from pathlib import Path
@@ -45,6 +46,7 @@ class Accounts:
         with self._engine.begin() as database:
             database.execute(
                 insert(users).values(
+                    public_id=uuid.uuid7(),
                     username=username,
                     password_hash=self._password_hasher.hash(password),
                 )
@@ -52,23 +54,23 @@ class Accounts:
 
     def log_in(self, username: str, password: str) -> Session:
         with self._engine.connect() as database:
-            stored_hash = database.execute(
-                select(users.c.password_hash).where(users.c.username == username)
-            ).scalar_one_or_none()
+            user = database.execute(
+                select(users.c.id, users.c.password_hash).where(users.c.username == username)
+            ).one_or_none()
         # An unknown username is still checked against a stand-in hash, so it
         # takes as long to refuse as a wrong password and the response time
         # doesn't reveal which usernames exist.
-        password_hash = stored_hash if stored_hash is not None else self._unknown_user_hash
+        password_hash = user.password_hash if user is not None else self._unknown_user_hash
         try:
             self._password_hasher.verify(password_hash, password)
         except VerifyMismatchError:
             raise LoginRefused from None
-        if stored_hash is None:
+        if user is None:
             raise LoginRefused
         session = Session(secrets.token_urlsafe(32))
         with self._engine.begin() as database:
             database.execute(
-                insert(sessions).values(token_hash=_token_hash(session), username=username)
+                insert(sessions).values(token_hash=_token_hash(session), user_id=user.id)
             )
         return session
 
@@ -76,9 +78,17 @@ class Accounts:
         """The user a session belongs to, or None once it has been logged out."""
         with self._engine.connect() as database:
             return database.execute(
-                select(sessions.c.username).where(
-                    sessions.c.token_hash == _token_hash(session)
-                )
+                select(users.c.username)
+                .join(sessions, sessions.c.user_id == users.c.id)
+                .where(sessions.c.token_hash == _token_hash(session))
+            ).scalar_one_or_none()
+
+    def public_id(self, username: str) -> uuid.UUID | None:
+        """How anything outside the database refers to this user, e.g. in logs.
+        None if there is no such user."""
+        with self._engine.connect() as database:
+            return database.execute(
+                select(users.c.public_id).where(users.c.username == username)
             ).scalar_one_or_none()
 
     def log_out(self, session: Session) -> None:
