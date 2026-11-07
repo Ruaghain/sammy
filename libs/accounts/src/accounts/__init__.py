@@ -4,7 +4,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import Engine, create_engine, delete, insert, select
+from sqlalchemy import Engine, create_engine
 from sqlalchemy.exc import IntegrityError
 
 from accounts.audit import record as _record
@@ -23,7 +23,8 @@ from accounts.errors import (
 from accounts.passwords import check_password, unknown_user_hash
 from accounts.sessions import Session, SessionService
 from accounts.users import UserService
-from accounts.tables import ADMIN_ROLE, roles, user_roles, users
+from accounts.roles import MANAGE_USERS, RoleService
+from accounts.tables import ADMIN_ROLE
 
 __all__ = [
     "Accounts",
@@ -41,10 +42,6 @@ __all__ = [
 
 _MIGRATIONS = Path(__file__).parent / "migrations"
 
-# Permissions are fixed in code (see CLAUDE.md, Stored data). The built-in
-# admin role has every one of them.
-MANAGE_USERS = "manage users"
-MANAGE_ROLES = "manage roles"
 
 
 class Accounts:
@@ -56,6 +53,7 @@ class Accounts:
         _migrate(self._engine)
         self._sessions = SessionService()
         self._users = UserService()
+        self._roles = RoleService()
 
     def create_user(self, username: str, password: str) -> None:
         with self._engine.begin() as database:
@@ -67,7 +65,7 @@ class Accounts:
         try:
             with self._engine.begin() as database:
                 acting = self._acting(database, actor)
-                _require(database, acting, MANAGE_USERS)
+                self._require(database, acting, MANAGE_USERS)
                 _, public_id = self._users.create(database, username, password)
         except IntegrityError:
             # The unique constraint on username is the check, so two requests
@@ -83,14 +81,12 @@ class Accounts:
                 acting = self._acting(database, actor)
                 # Checked first, so someone without permission can't learn which
                 # users or roles exist from the refusal they get.
-                _require(database, acting, MANAGE_USERS)
+                self._require(database, acting, MANAGE_USERS)
                 user = self._users.find(database, username)
-                role_id = database.execute(
-                    select(roles.c.id).where(roles.c.name == role)
-                ).scalar_one_or_none()
+                role_id = self._roles.find_id(database, role)
                 if role_id is None:
                     raise UnknownRole
-                database.execute(insert(user_roles).values(user_id=user.id, role_id=role_id))
+                self._roles.give(database, user.id, role_id)
         except IntegrityError:
             # user_roles' primary key is the check, as with usernames (#71).
             raise RoleAlreadyHeld from None
@@ -103,21 +99,15 @@ class Accounts:
         request."""
         with self._engine.begin() as database:
             acting = self._acting(database, actor)
-            _require(database, acting, MANAGE_USERS)
+            self._require(database, acting, MANAGE_USERS)
             user = self._users.find(database, username)
-            role_id = database.execute(
-                select(roles.c.id).where(roles.c.name == role)
-            ).scalar_one_or_none()
+            role_id = self._roles.find_id(database, role)
             if role_id is None:
                 raise UnknownRole
-            database.execute(
-                delete(user_roles).where(
-                    user_roles.c.user_id == user.id, user_roles.c.role_id == role_id
-                )
-            )
+            self._roles.remove(database, user.id, role_id)
             # Checked after the change, inside the transaction: raising rolls
             # the removal back.
-            if not _someone_can_manage(database, self._users.active_ids(database)):
+            if not self._roles.someone_can_manage(database, self._users.active_ids(database)):
                 raise LastManagerRequired
         _record("role removed", user.public_id, actor_public_id=acting.public_id, role=role)
 
@@ -127,9 +117,9 @@ class Accounts:
         it."""
         with self._engine.begin() as database:
             acting = self._acting(database, actor)
-            _require(database, acting, MANAGE_USERS)
+            self._require(database, acting, MANAGE_USERS)
             user = self._users.find(database, username)
-            if not _someone_can_manage(
+            if not self._roles.someone_can_manage(
                 database, self._users.active_ids(database), excluding=user.id
             ):
                 raise LastManagerRequired
@@ -141,8 +131,7 @@ class Accounts:
         building block for setting up users. Admins use give_role_as."""
         with self._engine.begin() as database:
             user_id = self._users.find(database, username).id
-            role_id = database.execute(select(roles.c.id).where(roles.c.name == role)).scalar_one()
-            database.execute(insert(user_roles).values(user_id=user_id, role_id=role_id))
+            self._roles.give(database, user_id, self._roles.find_id(database, role))
 
     def disable(self, username: str) -> None:
         """Disables a user directly, with no actor and no log entry: a building
@@ -161,23 +150,20 @@ class Accounts:
                 )
                 raise SetupAlreadyDone
             user_id, public_id = self._users.create(database, username, password)
-            admin_role_id = database.execute(
-                select(roles.c.id).where(roles.c.name == ADMIN_ROLE)
-            ).scalar_one()
-            database.execute(insert(user_roles).values(user_id=user_id, role_id=admin_role_id))
+            self._roles.give(database, user_id, self._roles.find_id(database, ADMIN_ROLE))
         _record("setup created admin", public_id)
 
     def roles_of(self, username: str) -> set[str]:
         """The names of the roles this user holds."""
         with self._engine.connect() as database:
-            return set(
-                database.execute(
-                    select(roles.c.name)
-                    .join(user_roles, user_roles.c.role_id == roles.c.id)
-                    .join(users, users.c.id == user_roles.c.user_id)
-                    .where(users.c.username == username)
-                ).scalars()
-            )
+            user = self._users.find(database, username)
+            return self._roles.names_of(database, user.id) if user is not None else set()
+
+    def _require(self, database, acting, permission: str) -> None:
+        """Refuses, and records the refusal, unless `acting` may do this."""
+        if not self._roles.can(database, acting.id, permission):
+            _record("permission refused", acting.public_id, level=logging.WARNING, permission=permission)
+            raise PermissionDenied
 
     def _acting(self, database, actor: Session | None):
         """Who is acting, from their session. Refuses if they aren't logged in:
@@ -244,37 +230,6 @@ class Accounts:
         # A session that's already gone has nobody to name.
         if user is not None:
             _record("logged out", user.public_id)
-
-
-def _can(database, user_id: int, permission: str) -> bool:
-    """Whether any of the user's roles allows this. The admin role allows
-    everything; other roles' permissions arrive with role management."""
-    return (
-        database.execute(
-            select(roles.c.id)
-            .join(user_roles, user_roles.c.role_id == roles.c.id)
-            .where(user_roles.c.user_id == user_id, roles.c.name == ADMIN_ROLE)
-        ).first()
-        is not None
-    )
-
-
-def _someone_can_manage(database, active_ids: list[int], excluding: int | None = None) -> bool:
-    """Whether at least one of the active users, other than `excluding`, can
-    still manage both users and roles, so Sammy can never be locked out of its
-    own administration. Disabled users can't log in, so they don't count."""
-    return any(
-        _can(database, user_id, MANAGE_USERS) and _can(database, user_id, MANAGE_ROLES)
-        for user_id in active_ids
-        if user_id != excluding
-    )
-
-
-def _require(database, acting, permission: str) -> None:
-    """Refuses, and records the refusal, unless `acting` may do this."""
-    if not _can(database, acting.id, permission):
-        _record("permission refused", acting.public_id, level=logging.WARNING, permission=permission)
-        raise PermissionDenied
 
 
 def _migrate(engine: Engine) -> None:
