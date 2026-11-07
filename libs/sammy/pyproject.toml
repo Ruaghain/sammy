@@ -1,0 +1,23 @@
+[project]
+name = "sammy"
+version = "0.1.0"
+description = "Starting Sammy: settings, logging and wiring, shared by every entry point."
+readme = "README.md"
+authors = [
+    { name = "Ruaghain", email = "ruaghain_dev@hotmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "accounts",
+    "orchestrator-agent",
+    "python-dotenv>=1.2.4",
+    "sqlalchemy>=2.1.6",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+accounts = { workspace = true }
+orchestrator-agent = { workspace = true }

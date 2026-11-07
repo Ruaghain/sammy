@@ -11,7 +11,6 @@ import logging
 from sqlalchemy import MetaData, create_engine, func, select
 
 from accounts import (
-    AccountService,
     LastManagerRequired,
     LoginRefused,
     LoginRequired,
@@ -21,9 +20,8 @@ from accounts import (
     SetupAlreadyDone,
     UnknownRole,
     UsernameTaken,
-    migrate,
 )
-from orchestrator_agent import Orchestrator
+from sammy import start
 
 
 class SammyDriver:
@@ -33,12 +31,10 @@ class SammyDriver:
         # A throwaway database per scenario (see drivers/database.py), so
         # scenarios can't affect each other.
         self._database_url = database_url
-        # As Sammy starts: one engine for the whole database, each package's
-        # tables migrated explicitly, then the services.
-        self._engine = create_engine(database_url)
-        migrate(self._engine)
-        self._accounts = AccountService(self._engine)
-        self._orchestrator = Orchestrator(self._accounts)
+        # Started exactly the way every entry point starts Sammy.
+        self._sammy = start(database_url)
+        self._accounts = self._sammy.accounts
+        self._orchestrator = self._sammy.orchestrator
         self._session: Session | None = None
         self._my_username: str | None = None
         self._login_refused = False
@@ -278,7 +274,7 @@ class SammyDriver:
 
     def close(self) -> None:
         self._log.stop()
-        self._engine.dispose()
+        self._sammy.close()
 
     def logged_in_user(self) -> str | None:
         return self._accounts.user_for(self._session) if self._session else None
