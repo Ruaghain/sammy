@@ -61,6 +61,14 @@ def test_a_refused_login_for_an_unknown_username_is_recorded_without_it():
     pass
 
 
+@pytest.mark.built_examples(
+    {"leaving": "test.user", "staying": "test.other"},
+)
+@scenario("user-login.feature", "Logging out is recorded for the person who logged out")
+def test_logging_out_is_recorded_for_the_person_who_logged_out():
+    pass
+
+
 @given(parsers.parse('I am logged in as "{username}"'))
 def given_i_am_logged_in_as(sammy: SammyDriver, username: str):
     sammy.add_user(username, "correct-horse")
@@ -151,3 +159,8 @@ def sammy_has_recorded_a_refused_login_for_an_unknown_user(sammy: SammyDriver):
 @then(parsers.parse('nothing Sammy has logged contains "{text}"'))
 def nothing_sammy_has_logged_contains(sammy: SammyDriver, text: str):
     assert text not in sammy.everything_logged()
+
+
+@then(parsers.parse('Sammy has not recorded that "{username}" logged out'))
+def sammy_has_not_recorded_a_logout(sammy: SammyDriver, username: str):
+    assert not sammy.has_recorded("logged out", username)
