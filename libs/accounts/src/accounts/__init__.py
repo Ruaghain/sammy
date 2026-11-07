@@ -73,6 +73,13 @@ class Accounts:
         except VerifyMismatchError:
             if user is not None:
                 _record("login refused", user.public_id, level=logging.WARNING)
+            else:
+                # Never the username: people sometimes type their password
+                # into the username box.
+                _log.warning(
+                    "login refused: no such user",
+                    extra={"event": "login refused for unknown user"},
+                )
             raise LoginRefused from None
         if user is None:
             raise LoginRefused

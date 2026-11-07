@@ -56,6 +56,11 @@ def test_logging_out_is_recorded():
     pass
 
 
+@scenario("user-login.feature", "A refused login for an unknown username is recorded without it")
+def test_a_refused_login_for_an_unknown_username_is_recorded_without_it():
+    pass
+
+
 @given(parsers.parse('I am logged in as "{username}"'))
 def given_i_am_logged_in_as(sammy: SammyDriver, username: str):
     sammy.add_user(username, "correct-horse")
@@ -136,3 +141,13 @@ def sammy_has_recorded_a_refused_login(sammy: SammyDriver, username: str):
 @then(parsers.parse('Sammy has recorded that "{username}" logged out'))
 def sammy_has_recorded_a_logout(sammy: SammyDriver, username: str):
     assert sammy.has_recorded("logged out", username)
+
+
+@then("Sammy has recorded that a login was refused for an unknown user")
+def sammy_has_recorded_a_refused_login_for_an_unknown_user(sammy: SammyDriver):
+    assert sammy.has_recorded_about_nobody("login refused for unknown user")
+
+
+@then(parsers.parse('nothing Sammy has logged contains "{text}"'))
+def nothing_sammy_has_logged_contains(sammy: SammyDriver, text: str):
+    assert text not in sammy.everything_logged()
