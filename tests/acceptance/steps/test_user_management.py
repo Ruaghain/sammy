@@ -63,6 +63,11 @@ def test_removing_a_role_applies_to_a_user_who_is_already_logged_in():
     pass
 
 
+@scenario("user-management.feature", "The last user who can manage users keeps the admin role")
+def test_the_last_user_who_can_manage_users_keeps_the_admin_role():
+    pass
+
+
 @given("no users exist")
 def no_users_exist(sammy: SammyDriver):
     assert sammy.user_count() == 0
@@ -194,3 +199,20 @@ def can_no_longer_create_users(sammy: SammyDriver, username: str):
 @then(parsers.parse('Sammy has recorded that "{actor}" removed the "{role}" role from "{username}"'))
 def sammy_has_recorded_that_someone_removed_a_role(sammy: SammyDriver, actor: str, role: str, username: str):
     assert sammy.has_recorded("role removed", username, by=actor, role=role)
+
+
+@given(
+    parsers.parse(
+        'I am logged in as the admin "{username}", the only user who can manage users and roles'
+    )
+)
+def i_am_logged_in_as_the_only_admin(sammy: SammyDriver, username: str):
+    sammy.run_setup(username, "correct-horse")
+    sammy.log_in(username, "correct-horse")
+    # Setup only works on an empty Sammy, so this admin is the only user.
+    assert sammy.user_count() == 1
+
+
+@then("I am told at least one user must be able to manage users and roles")
+def i_am_told_someone_must_manage(sammy: SammyDriver):
+    assert sammy.last_manager_was_protected()
