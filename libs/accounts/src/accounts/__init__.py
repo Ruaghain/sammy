@@ -33,6 +33,10 @@ class LoginRefused(Exception):
     reveals nothing about which detail was wrong."""
 
 
+class SetupAlreadyDone(Exception):
+    """Raised when setup is run on a Sammy that already has users."""
+
+
 class Accounts:
     def __init__(self, database_url: str):
         """database_url is a SQLAlchemy URL: sqlite:///path/to/sammy.sqlite or
@@ -52,8 +56,12 @@ class Accounts:
             self._insert_user(database, username, password)
 
     def set_up(self, username: str, password: str) -> None:
-        """Creates the first admin: a user holding the built-in admin role."""
+        """Creates the first admin: a user holding the built-in admin role.
+        Only allowed while Sammy has no users at all."""
         with self._engine.begin() as database:
+            if database.execute(select(users.c.id).limit(1)).first() is not None:
+                _log.warning("setup refused: users already exist", extra={"event": "setup refused"})
+                raise SetupAlreadyDone
             user_id, public_id = self._insert_user(database, username, password)
             admin_role_id = database.execute(
                 select(roles.c.id).where(roles.c.name == ADMIN_ROLE)

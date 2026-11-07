@@ -10,7 +10,7 @@ import logging
 
 from sqlalchemy import MetaData, create_engine, func, select
 
-from accounts import Accounts, LoginRefused, Session
+from accounts import Accounts, LoginRefused, Session, SetupAlreadyDone
 from orchestrator_agent import LoginRequired, Orchestrator
 
 
@@ -26,6 +26,7 @@ class SammyDriver:
         self._session: Session | None = None
         self._login_refused = False
         self._asked_to_log_in = False
+        self._setup_refused = False
         # Sessions of other people, by username, for scenarios with several
         # people logged in at once.
         self._sessions_by_user: dict[str, Session] = {}
@@ -60,7 +61,14 @@ class SammyDriver:
             engine.dispose()
 
     def run_setup(self, username: str, password: str) -> None:
-        self._accounts.set_up(username, password)
+        try:
+            self._accounts.set_up(username, password)
+            self._setup_refused = False
+        except SetupAlreadyDone:
+            self._setup_refused = True
+
+    def setup_was_refused(self) -> bool:
+        return self._setup_refused
 
     def can_log_in(self, username: str, password: str) -> bool:
         """Tries the login on the side, without changing who "I" am logged in
