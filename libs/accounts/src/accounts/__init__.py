@@ -42,6 +42,10 @@ class UsernameTaken(Exception):
     """Raised when creating a user whose username is already in use."""
 
 
+class UnknownRole(Exception):
+    """Raised when a role is named that doesn't exist."""
+
+
 class Accounts:
     def __init__(self, database_url: str):
         """database_url is a SQLAlchemy URL: sqlite:///path/to/sammy.sqlite or
@@ -81,7 +85,11 @@ class Accounts:
             user = database.execute(
                 select(users.c.id, users.c.public_id).where(users.c.username == username)
             ).one()
-            role_id = database.execute(select(roles.c.id).where(roles.c.name == role)).scalar_one()
+            role_id = database.execute(
+                select(roles.c.id).where(roles.c.name == role)
+            ).scalar_one_or_none()
+            if role_id is None:
+                raise UnknownRole
             database.execute(insert(user_roles).values(user_id=user.id, role_id=role_id))
         _record("role given", user.public_id, actor_public_id=actor_public_id, role=role)
 
