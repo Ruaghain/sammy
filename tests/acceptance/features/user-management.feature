@@ -114,3 +114,19 @@ Feature: Managing users
     When I give "test.other" the "admin" role
     Then "test.other" has the "admin" role
     And "test.user" has no roles
+
+  Scenario: Someone else being an admin doesn't let me manage users
+    Given I am logged in as "test.helper", who has no roles
+    And a user "test.later" with the "admin" role
+    When I create the user "test.new" with the password "correct-horse"
+    Then I am told I don't have permission
+    And the user "test.new" doesn't exist
+
+  Scenario: Removing a role affects only that user
+    Given I am logged in as the admin "test.admin"
+    And "test.user" is logged in with the "admin" role
+    And "test.zed" is logged in with the "admin" role
+    When I remove the "admin" role from "test.user"
+    Then "test.user" can no longer create users
+    But "test.admin" can still create users
+    And "test.zed" can still create users
