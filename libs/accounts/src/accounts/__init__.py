@@ -144,23 +144,28 @@ class Accounts:
         _record("role removed", user.public_id, actor_public_id=acting.public_id, role=role)
 
     def disable_as(self, actor: Session | None, username: str) -> None:
-        """Disables a user on behalf of whoever holds `actor`."""
+        """Disables a user on behalf of whoever holds `actor`: they can't log
+        in again, and every session they have ends at once. Records who did
+        it."""
         with self._engine.begin() as database:
-            _require(database, _acting(database, actor), MANAGE_USERS)
+            acting = _acting(database, actor)
+            _require(database, acting, MANAGE_USERS)
+            user = database.execute(
+                select(users.c.id, users.c.public_id).where(users.c.username == username)
+            ).one()
+            if not _someone_can_manage(database, excluding=user.id):
+                raise LastManagerRequired
+            _disable(database, user.id)
+        _record("user disabled", user.public_id, actor_public_id=acting.public_id)
+
+    def disable(self, username: str) -> None:
+        """Disables a user directly, with no actor and no log entry: a building
+        block for setting up a disabled user. Admins use disable_as."""
+        with self._engine.begin() as database:
             user_id = database.execute(
                 select(users.c.id).where(users.c.username == username)
             ).scalar_one()
-            if not _someone_can_manage(database, excluding=user_id):
-                raise LastManagerRequired
-        # What disabling does is specified by a later scenario (#81).
-        raise NotImplementedError("Disabling users isn't built yet")
-
-    def disable(self, username: str) -> None:
-        """Marks a user as disabled, so they can no longer log in."""
-        with self._engine.begin() as database:
-            database.execute(
-                update(users).where(users.c.username == username).values(disabled=True)
-            )
+            _disable(database, user_id)
 
     def set_up(self, username: str, password: str) -> None:
         """Creates the first admin: a user holding the built-in admin role.
@@ -274,6 +279,12 @@ def _session_user(database, session: Session):
         .join(sessions, sessions.c.user_id == users.c.id)
         .where(sessions.c.token_hash == _token_hash(session))
     ).one_or_none()
+
+
+def _disable(database, user_id: int) -> None:
+    """Marks the user disabled and ends all their sessions."""
+    database.execute(update(users).where(users.c.id == user_id).values(disabled=True))
+    database.execute(delete(sessions).where(sessions.c.user_id == user_id))
 
 
 def _acting(database, actor: Session | None):
