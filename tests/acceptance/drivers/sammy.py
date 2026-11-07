@@ -11,7 +11,7 @@ import logging
 from sqlalchemy import MetaData, create_engine, func, select
 
 from accounts import (
-    Accounts,
+    AccountService,
     LastManagerRequired,
     LoginRefused,
     LoginRequired,
@@ -32,7 +32,7 @@ class SammyDriver:
         # A throwaway database per scenario (see drivers/database.py), so
         # scenarios can't affect each other.
         self._database_url = database_url
-        self._accounts = Accounts(database_url)
+        self._accounts = AccountService(database_url)
         self._orchestrator = Orchestrator(self._accounts)
         self._session: Session | None = None
         self._my_username: str | None = None
