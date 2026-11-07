@@ -112,11 +112,6 @@ def someone_logs_out(sammy: SammyDriver, username: str):
     sammy.someone_logs_out(username)
 
 
-@then(parsers.parse('"{username}" is still logged in'))
-def is_still_logged_in(sammy: SammyDriver, username: str):
-    assert sammy.is_logged_in(username)
-
-
 @then(parsers.parse('Sammy has recorded that "{username}" logged in'))
 def sammy_has_recorded_a_login(sammy: SammyDriver, username: str):
     assert sammy.has_recorded("login succeeded", username)
