@@ -67,3 +67,15 @@ def can_create_users(sammy: SammyDriver, username: str):
 @then(parsers.parse('"{username}" has no roles'))
 def has_no_roles(sammy: SammyDriver, username: str):
     assert sammy.roles_of(username) == set()
+
+
+@given(parsers.parse('"{username}" is logged in with the "{role}" role'))
+def is_logged_in_with_the_role(sammy: SammyDriver, username: str, role: str):
+    sammy.someone_logs_in(username)
+    sammy.give_role(username, role)
+
+
+@given(parsers.parse('"{username}" has been given the "{role}" role'))
+def has_been_given_the_role(sammy: SammyDriver, username: str, role: str):
+    sammy.give_role(username, role)
+    assert role in sammy.roles_of(username)

@@ -123,6 +123,11 @@ class SammyDriver:
         "manage users and roles"."""
         self._accounts.create_role_as(self._session, role, _permission_names(permissions))
 
+    def has_role(self, role: str, permissions: str) -> None:
+        """Sets up a role directly, as a Given; creating a role as an admin
+        goes through create_role()."""
+        self._accounts.create_role(role, _permission_names(permissions))
+
     def can_create_roles(self, username: str) -> bool:
         """Tries to create a role as this person, as can_create_users does for
         users."""

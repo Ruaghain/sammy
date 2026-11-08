@@ -121,6 +121,12 @@ class AccountService:
             self._disable(database, user.id)
         _record("user disabled", user.public_id, actor_public_id=acting.public_id)
 
+    def create_role(self, name: str, permissions: list[str]) -> None:
+        """Creates a role directly, with no actor and no log entry: a building
+        block for setting up roles. Admins use create_role_as."""
+        with self._engine.begin() as database:
+            self._roles.create(database, name, permissions)
+
     def give_role(self, username: str, role: str) -> None:
         """Gives a user a role directly, with no actor and no log entry: a
         building block for setting up users. Admins use give_role_as."""
