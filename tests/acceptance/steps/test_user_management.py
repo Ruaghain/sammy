@@ -209,11 +209,6 @@ def i_remove_the_role(sammy: SammyDriver, role: str, username: str):
     sammy.remove_role(username, role)
 
 
-@then(parsers.parse('"{username}" can no longer create users'))
-def can_no_longer_create_users(sammy: SammyDriver, username: str):
-    assert not sammy.can_create_users(username)
-
-
 @then(parsers.parse('Sammy has recorded that "{actor}" removed the "{role}" role from "{username}"'))
 def sammy_has_recorded_that_someone_removed_a_role(sammy: SammyDriver, actor: str, role: str, username: str):
     assert sammy.has_recorded("role removed", username, by=actor, role=role)

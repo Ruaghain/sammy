@@ -132,12 +132,18 @@ class SammyDriver:
         """Lets a role do more, as "me", from a phrase such as "manage users"."""
         self._accounts.grant_as(self._session, role, _permission_names(permissions))
 
-    def has_recorded_for_each(self, permissions: str, event: str, **fields) -> bool:
-        """has_recorded, once for each permission the phrase names."""
-        return all(
-            self.has_recorded(event, permission=permission, **fields)
-            for permission in _permission_names(permissions)
-        )
+    def revoke(self, role: str, permissions: str) -> None:
+        """Stops a role doing something, as "me", from a phrase such as
+        "managing users"."""
+        self._accounts.revoke_as(self._session, role, _permission_names_doing(permissions))
+
+    def has_recorded_for_each(
+        self, permissions: str, event: str, phrased_as: str = "do", **fields
+    ) -> bool:
+        """has_recorded, once for each permission the phrase names; the phrase
+        is "manage users" style ("do") or "managing users" style ("doing")."""
+        names = _permission_names_doing(permissions) if phrased_as == "doing" else _permission_names(permissions)
+        return all(self.has_recorded(event, permission=permission, **fields) for permission in names)
 
     def can_create_roles(self, username: str) -> bool:
         """Tries to create a role as this person, as can_create_users does for
@@ -382,3 +388,11 @@ def _permission_names(phrase: str) -> list[str]:
     if verb == "use" and rest.startswith('the agent "'):
         return [f"use agent {rest.removeprefix('the agent ').strip('\"')}"]
     return [f"{verb} {thing.strip()}" for thing in rest.split(" and ")]
+
+
+def _permission_names_doing(phrase: str) -> list[str]:
+    """As _permission_names, for phrases such as "managing users and roles"
+    or 'using the agent "homework"'."""
+    verb, _, rest = phrase.partition(" ")
+    plain = {"managing": "manage", "viewing": "view", "using": "use"}.get(verb, verb)
+    return _permission_names(f"{plain} {rest}")

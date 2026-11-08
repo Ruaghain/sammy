@@ -89,6 +89,26 @@ class AccountService:
                 permission=permission,
             )
 
+    def revoke_as(self, actor: Session | None, role: str, permissions: list[str]) -> None:
+        """Stops a role doing something, on behalf of whoever holds `actor`, and
+        records who did it. It applies straight away, including to sessions its
+        holders already have."""
+        with self._engine.begin() as database:
+            acting = self._acting(database, actor)
+            self._require(database, acting, MANAGE_ROLES)
+            role_id = self._roles.find_id(database, role)
+            if role_id is None:
+                raise UnknownRole
+            for permission in permissions:
+                self._roles.revoke(database, role_id, permission)
+        for permission in permissions:
+            _record(
+                "permission revoked",
+                actor_public_id=acting.public_id,
+                role=role,
+                permission=permission,
+            )
+
     def give_role_as(self, actor: Session | None, username: str, role: str) -> None:
         """Gives a user a role on behalf of whoever holds `actor`, and records
         who did it. Refused if they already hold it."""
