@@ -92,11 +92,6 @@ def i_send_sammy_a_message(sammy: SammyDriver):
     sammy.send_message("What's on the calendar today?")
 
 
-@then(parsers.parse('I am logged in as "{username}"'))
-def i_am_logged_in_as(sammy: SammyDriver, username: str):
-    assert sammy.logged_in_user() == username
-
-
 @given(parsers.parse('"{first}" and "{second}" are both logged in'))
 def both_are_logged_in(sammy: SammyDriver, first: str, second: str):
     sammy.someone_logs_in(first)

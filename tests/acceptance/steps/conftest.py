@@ -79,3 +79,8 @@ def is_logged_in_with_the_role(sammy: SammyDriver, username: str, role: str):
 def has_been_given_the_role(sammy: SammyDriver, username: str, role: str):
     sammy.give_role(username, role)
     assert role in sammy.roles_of(username)
+
+
+@then(parsers.parse('I am logged in as "{username}"'))
+def i_am_logged_in_as(sammy: SammyDriver, username: str):
+    assert sammy.logged_in_user() == username
