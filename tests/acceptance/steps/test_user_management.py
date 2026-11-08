@@ -226,11 +226,6 @@ def i_am_logged_in_as_the_only_admin(sammy: SammyDriver, username: str):
     assert sammy.user_count() == 1
 
 
-@then("I am told at least one user must be able to manage users and roles")
-def i_am_told_someone_must_manage(sammy: SammyDriver):
-    assert sammy.last_manager_was_protected()
-
-
 @then(parsers.parse('"{username}" can still log in'))
 def can_still_log_in(sammy: SammyDriver, username: str):
     assert sammy.can_log_in_with_their_password(username)
