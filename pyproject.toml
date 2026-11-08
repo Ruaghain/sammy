@@ -2,8 +2,8 @@
 members = [
     "libs/accounts",
     "agent/orchestrator-agent",
-    "cli",
-    "libs/sammy",
+    "apps/cli",
+    "libs/bootstrap",
 ]
 
 [dependency-groups]
@@ -14,7 +14,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "agent", "libs", "cli", "tools"]
+testpaths = ["tests", "agent", "libs", "apps", "tools"]
 addopts = "--import-mode=importlib"  # agents may share unit-test file names
 pythonpath = ["tests/acceptance", "tools"]
 bdd_features_base_dir = "tests/acceptance/features"

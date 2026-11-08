@@ -15,15 +15,28 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   ATDD loop and is mutation tested. Create it with
   `uv init --package libs/accounts`, then add `libs` to `testpaths` in
   `pyproject.toml` and to `module-path` in `cosmic-ray.toml`.
-- `libs/sammy/` - the `sammy` package: how Sammy starts, whatever starts it.
+- `libs/bootstrap/` - the `bootstrap` package: how Sammy starts, whatever
+  starts it.
   Settings from the environment and `.env` (`config.py`), the log file
   (`logs.py`), and `start(database_url)` (`startup.py`): the one database
   engine, each package's migrations, then the services. Every entry point
   (the `sammy` command, the web backend later, the acceptance driver) starts
-  Sammy through `start()`.
-- `cli/` - the `sammy-cli` package: only the `sammy` command, which parses
-  the command line and uses `libs/sammy`.
-- `web/` - the eventual from-scratch web UI/server.
+  Sammy through `start()`. It sits at the top of the dependency graph (it
+  imports `accounts`, the orchestrator and, later, every agent), so it is
+  deliberately not in `libs/core`, which holds shared contracts at the bottom.
+- `apps/` - things you run, each a thin entry point over `libs/bootstrap`:
+  - `apps/cli/` - the `cli` package: only the `sammy` command, which parses
+    the command line and uses `bootstrap`.
+  - `apps/web/` - the web backend, when it's started (today's `web/`
+    placeholder moves here).
+- Package names say what the package does (`accounts`, `bootstrap`, `cli`),
+  never "sammy": Sammy is the whole application.
+- A top-level folder must never have the same name as a package. pytest's
+  `importlib` import mode names test modules after their path, so a
+  top-level `cli/` folder registers a placeholder module `cli` that hides
+  the real `cli` package. Hence `apps/cli/`, not `cli/`.
+- `web/` - placeholder for the from-scratch web UI/server; it moves to
+  `apps/web/` when work on it starts.
 - `tools/` - repo tooling (e.g. the feature-issue sync), unit tested under
   `tools/tests/`. Not product code, so outside the ATDD loop and mutation
   testing.
@@ -280,7 +293,7 @@ Every behavioural change goes through this loop, one scenario at a time:
 - `uv run pytest tests/acceptance` - acceptance tests only.
 - `uv run pytest agent` - agent unit tests only.
 - `uv run pytest libs` - shared library unit tests only.
-- `uv run pytest cli` - the `sammy` command's unit tests only.
+- `uv run pytest apps` - the `sammy` command's unit tests only.
 - `uv run pytest tools` - tooling tests only.
 - Against PostgreSQL: set `SAMMY_TEST_DATABASE_URL` to a server the tests may
   create and drop databases on, then run the acceptance tests. Locally:
@@ -330,12 +343,12 @@ Every behavioural change goes through this loop, one scenario at a time:
   `agent/` as a periodic gate (nightly CI / pre-release), not per-PR —
   full-suite runs are too slow for the per-commit loop above.
 - Scope: cosmic-ray covers `agent/` and `libs/`, including
-  `libs/sammy/src/sammy/startup.py`, which the acceptance driver starts Sammy
+  `libs/bootstrap/src/bootstrap/startup.py`, which the acceptance driver starts Sammy
   through. Left out on purpose, because no scenario can see them, so every
   mutant would survive and say nothing; their unit tests cover them:
-  - `cli/`: no scenario drives Sammy through the `sammy` command yet. Add
-    `cli` to `module-path` once scenarios use it.
-  - `libs/sammy`'s `config.py` (reading settings) and `logs.py` (the log
+  - `apps/cli/`: no scenario drives Sammy through the `sammy` command yet.
+    Add `apps` to `module-path` once scenarios use it.
+  - `libs/bootstrap`'s `config.py` (reading settings) and `logs.py` (the log
     file), listed in `excluded-modules`.
   `web/` has no mutation coverage yet — out of scope until/unless a JS
   equivalent (Stryker) gets added.

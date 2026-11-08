@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from sammy.config import Settings
-from sammy.logs import configure_logging
+from bootstrap.config import Settings
+from bootstrap.logs import configure_logging
 
 
 @pytest.fixture

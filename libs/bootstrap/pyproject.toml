@@ -1,5 +1,5 @@
 [project]
-name = "sammy"
+name = "bootstrap"
 version = "0.1.0"
 description = "Starting Sammy: settings, logging and wiring, shared by every entry point."
 readme = "README.md"

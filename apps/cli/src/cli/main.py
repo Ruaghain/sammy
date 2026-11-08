@@ -4,7 +4,7 @@ import argparse
 import logging
 import sys
 
-from sammy import ConfigurationError, configure_logging, load_settings, start
+from bootstrap import ConfigurationError, configure_logging, load_settings, start
 
 _log = logging.getLogger("sammy")
 

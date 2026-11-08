@@ -10,10 +10,10 @@ excluded-modules = [
     "libs/*/src/*/tables.py",
     # Reading settings and setting up the log file: no scenario can see
     # either, so every mutant would survive. Unit tests cover them. (How
-    # Sammy starts, sammy/startup.py, is mutated: the acceptance driver
+    # Sammy starts, bootstrap/startup.py, is mutated: the acceptance driver
     # starts Sammy through it.)
-    "libs/sammy/src/sammy/config.py",
-    "libs/sammy/src/sammy/logs.py",
+    "libs/bootstrap/src/bootstrap/config.py",
+    "libs/bootstrap/src/bootstrap/logs.py",
 ]
 timeout = 30.0
 test-command = "pytest -x -q tests/acceptance"  # survivors must point at scenario gaps, so unit tests do not count
