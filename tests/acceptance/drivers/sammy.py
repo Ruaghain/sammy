@@ -118,9 +118,27 @@ class SammyDriver:
     def role_was_unknown(self) -> bool:
         return self._role_unknown
 
+    def create_role(self, role: str, permissions: str) -> None:
+        """Creates a role as "me", from a phrase such as "manage users" or
+        "manage users and roles"."""
+        self._accounts.create_role_as(self._session, role, _permission_names(permissions))
+
+    def can_create_roles(self, username: str) -> bool:
+        """Tries to create a role as this person, as can_create_users does for
+        users."""
+        return self._can_as(
+            username, lambda session, n: self._accounts.create_role_as(session, f"test.probe-role{n}", [])
+        )
+
     def can_create_users(self, username: str) -> bool:
         """Tries to create a user as this person: through the session they're
         already logged in with, if any, otherwise a login on the side."""
+        return self._can_as(
+            username,
+            lambda session, n: self._accounts.create_user_as(session, f"test.probe{n}", "correct-horse"),
+        )
+
+    def _can_as(self, username: str, attempt) -> bool:
         existing = self._sessions_by_user.get(username)
         if existing is None and self._session is not None and self._my_username == username:
             # "Me": the session I logged in with, even if Sammy has since
@@ -129,7 +147,7 @@ class SammyDriver:
         session = existing or self._accounts.log_in(username, self._passwords[username])
         try:
             self._probes += 1
-            self._accounts.create_user_as(session, f"test.probe{self._probes}", "correct-horse")
+            attempt(session, self._probes)
             return True
         except (PermissionDenied, LoginRequired):
             return False
@@ -246,15 +264,20 @@ class SammyDriver:
             engine.dispose()
         return "\n".join(values + self._log.lines())
 
-    def has_recorded(self, event: str, username: str, by: str | None = None, **fields) -> bool:
-        """Whether Sammy has logged this event for this user; if `by` is given,
-        that this person did it; and that any other `fields` match. Logs name
-        users only by public id, so the usernames are looked up first."""
-        public_id = self._accounts.public_id(username)
+    def has_recorded(
+        self, event: str, username: str | None = None, by: str | None = None, **fields
+    ) -> bool:
+        """Whether Sammy has logged this event; if `username` is given, about
+        that user; if `by` is given, that this person did it; and that any
+        other `fields` match. Logs name users only by public id, so the
+        usernames are looked up first."""
+        public_id = self._accounts.public_id(username) if username is not None else None
         actor_id = self._accounts.public_id(by) if by is not None else None
-        return public_id is not None and any(
+        if (username is not None and public_id is None) or (by is not None and actor_id is None):
+            return False
+        return any(
             getattr(record, "event", None) == event
-            and getattr(record, "public_id", None) == str(public_id)
+            and (username is None or getattr(record, "public_id", None) == str(public_id))
             and (by is None or getattr(record, "actor_public_id", None) == str(actor_id))
             and all(getattr(record, name, None) == value for name, value in fields.items())
             for record in self._log.records()
@@ -331,3 +354,15 @@ def _extra_fields(record: logging.LogRecord) -> dict:
         for name, value in vars(record).items()
         if name not in _STANDARD_RECORD_FIELDS and name not in ("message", "asctime")
     }
+
+
+def _permission_names(phrase: str) -> list[str]:
+    """Turns how a scenario says it ("manage users", "manage users and roles",
+    "view agents", 'use the agent "homework"') into Sammy's permission names
+    ("manage users", "manage roles", "use agent homework", ...)."""
+    if phrase == "no permissions":
+        return []
+    verb, _, rest = phrase.partition(" ")
+    if verb == "use" and rest.startswith('the agent "'):
+        return [f"use agent {rest.removeprefix('the agent ').strip('\"')}"]
+    return [f"{verb} {thing.strip()}" for thing in rest.split(" and ")]

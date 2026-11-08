@@ -17,7 +17,7 @@ from accounts.errors import (
     UsernameTaken,
 )
 from accounts.passwords import check_password, unknown_user_hash
-from accounts.roles import MANAGE_USERS, RoleService
+from accounts.roles import MANAGE_ROLES, MANAGE_USERS, RoleService
 from accounts.sessions import Session, SessionService
 from accounts.tables import ADMIN_ROLE
 from accounts.users import UserService
@@ -58,6 +58,15 @@ class AccountService:
             # at once can't both create the same username.
             raise UsernameTaken from None
         _record("user created", public_id, actor_public_id=acting.public_id)
+
+    def create_role_as(self, actor: Session | None, name: str, permissions: list[str]) -> None:
+        """Creates a role granting these permissions, on behalf of whoever
+        holds `actor`, and records who did it."""
+        with self._engine.begin() as database:
+            acting = self._acting(database, actor)
+            self._require(database, acting, MANAGE_ROLES)
+            self._roles.create(database, name, permissions)
+        _record("role created", actor_public_id=acting.public_id, role=name)
 
     def give_role_as(self, actor: Session | None, username: str, role: str) -> None:
         """Gives a user a role on behalf of whoever holds `actor`, and records

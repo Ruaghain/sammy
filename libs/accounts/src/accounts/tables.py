@@ -48,5 +48,13 @@ user_roles = Table(
     Column("role_id", Integer, ForeignKey("roles.id"), primary_key=True),
 )
 
+# What each role allows: one row per permission. The admin role needs none.
+role_permissions = Table(
+    "role_permissions",
+    metadata,
+    Column("role_id", Integer, ForeignKey("roles.id"), primary_key=True),
+    Column("permission", Text, primary_key=True),
+)
+
 # The built-in role every Sammy has; created by migration 0003.
 ADMIN_ROLE = "admin"
