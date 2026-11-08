@@ -206,3 +206,8 @@ def can_still_create_roles(sammy: SammyDriver, username: str):
 @scenario("role-management.feature", "Only users who can manage roles can change them")
 def test_only_users_who_can_manage_roles_can_change_them():
     pass
+
+
+@scenario("role-management.feature", "Managing roles requires logging in")
+def test_managing_roles_requires_logging_in():
+    pass
