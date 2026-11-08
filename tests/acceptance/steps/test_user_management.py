@@ -204,12 +204,6 @@ def i_disable(sammy: SammyDriver, username: str):
     sammy.disable(username)
 
 
-@given(parsers.parse('"{username}" is logged in with the "{role}" role'))
-def is_logged_in_with_the_role(sammy: SammyDriver, username: str, role: str):
-    sammy.someone_logs_in(username)
-    sammy.give_role(username, role)
-
-
 @when(parsers.parse('I remove the "{role}" role from "{username}"'))
 def i_remove_the_role(sammy: SammyDriver, role: str, username: str):
     sammy.remove_role(username, role)
@@ -265,12 +259,6 @@ def is_no_longer_logged_in(sammy: SammyDriver, username: str):
 @then(parsers.parse('Sammy has recorded that "{actor}" disabled "{username}"'))
 def sammy_has_recorded_that_someone_disabled_a_user(sammy: SammyDriver, actor: str, username: str):
     assert sammy.has_recorded("user disabled", username, by=actor)
-
-
-@given(parsers.parse('"{username}" has been given the "{role}" role'))
-def has_been_given_the_role(sammy: SammyDriver, username: str, role: str):
-    sammy.give_role(username, role)
-    assert role in sammy.roles_of(username)
 
 
 @then(parsers.parse('I am told "{username}" already has the "{role}" role'))

@@ -1,4 +1,4 @@
-from pytest_bdd import parsers, scenario, then, when
+from pytest_bdd import given, parsers, scenario, then, when
 
 from drivers.sammy import SammyDriver
 
@@ -21,3 +21,18 @@ def cant_create_roles(sammy: SammyDriver, username: str):
 @then(parsers.parse('Sammy has recorded that "{actor}" created the role "{role}"'))
 def sammy_has_recorded_that_someone_created_a_role(sammy: SammyDriver, actor: str, role: str):
     assert sammy.has_recorded("role created", by=actor, role=role)
+
+
+@scenario("role-management.feature", "A user's permissions come from all of their roles")
+def test_a_users_permissions_come_from_all_of_their_roles():
+    pass
+
+
+@given(parsers.parse('a role "{role}" that can {permissions}'))
+def a_role_that_can(sammy: SammyDriver, role: str, permissions: str):
+    sammy.has_role(role, permissions)
+
+
+@then(parsers.parse('"{username}" can create roles'))
+def can_create_roles(sammy: SammyDriver, username: str):
+    assert sammy.can_create_roles(username)
