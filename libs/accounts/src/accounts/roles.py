@@ -20,8 +20,12 @@ class RoleService:
         """A new role granting these permissions. Returns its id."""
         role_id = database.execute(insert(roles).values(name=name).returning(roles.c.id)).scalar_one()
         for permission in permissions:
-            database.execute(insert(role_permissions).values(role_id=role_id, permission=permission))
+            self.grant(database, role_id, permission)
         return role_id
+
+    def grant(self, database: Connection, role_id: int, permission: str) -> None:
+        """Lets the role do this as well. Everyone holding it can, at once."""
+        database.execute(insert(role_permissions).values(role_id=role_id, permission=permission))
 
     def find_id(self, database: Connection, name: str) -> int | None:
         """The id of the role with this name, or None if there's no such role."""
