@@ -4,6 +4,7 @@ alongside it each hold one concern."""
 
 from accounts.errors import (
     AccountsError,
+    AdminRoleIsFixed,
     LastManagerRequired,
     LoginRefused,
     LoginRequired,
@@ -20,6 +21,7 @@ from accounts.sessions import Session
 __all__ = [
     "AccountService",
     "AccountsError",
+    "AdminRoleIsFixed",
     "LastManagerRequired",
     "LoginRefused",
     "LoginRequired",

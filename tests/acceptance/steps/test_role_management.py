@@ -83,3 +83,13 @@ def sammy_has_recorded_a_revoked_permission(sammy: SammyDriver, actor: str, role
     assert sammy.has_recorded_for_each(
         permissions, "permission revoked", by=actor, role=role, phrased_as="doing"
     )
+
+
+@scenario("role-management.feature", "The admin role can't be changed")
+def test_the_admin_role_cant_be_changed():
+    pass
+
+
+@then("I am told the admin role can't be changed")
+def i_am_told_the_admin_role_cant_be_changed(sammy: SammyDriver):
+    assert sammy.admin_role_was_protected()

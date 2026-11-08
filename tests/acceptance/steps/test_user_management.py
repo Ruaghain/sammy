@@ -265,8 +265,3 @@ def i_am_told_they_already_have_the_role(sammy: SammyDriver, username: str, role
 def a_user_with_the_role(sammy: SammyDriver, username: str, role: str):
     sammy.add_user(username, "correct-horse")
     sammy.has_been_given_role(username, role)
-
-
-@then(parsers.parse('"{username}" can still create users'))
-def can_still_create_users(sammy: SammyDriver, username: str):
-    assert sammy.can_create_users(username)

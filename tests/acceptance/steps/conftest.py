@@ -89,3 +89,8 @@ def i_am_logged_in_as(sammy: SammyDriver, username: str):
 @then(parsers.parse('"{username}" can no longer create users'))
 def can_no_longer_create_users(sammy: SammyDriver, username: str):
     assert not sammy.can_create_users(username)
+
+
+@then(parsers.parse('"{username}" can still create users'))
+def can_still_create_users(sammy: SammyDriver, username: str):
+    assert sammy.can_create_users(username)
