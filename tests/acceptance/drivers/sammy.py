@@ -177,6 +177,8 @@ class SammyDriver:
             self._admin_role_protected = True
         except RoleInUse:
             self._role_in_use = True
+        except PermissionDenied:
+            self._permission_denied = True
 
     def role_was_in_use(self) -> bool:
         return self._role_in_use

@@ -198,6 +198,10 @@ def can_still_create_roles(sammy: SammyDriver, username: str):
         "action": 'let the role "helper" manage users',
         "unchanged": 'the role "helper" still has no permissions',
     },
+    {
+        "action": 'delete the role "helper"',
+        "unchanged": 'the role "helper" still exists',
+    },
 )
 @scenario("role-management.feature", "Only users who can manage roles can change them")
 def test_only_users_who_can_manage_roles_can_change_them():
