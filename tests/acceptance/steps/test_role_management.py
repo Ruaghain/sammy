@@ -46,3 +46,23 @@ def test_a_user_with_no_roles_can_log_in_but_cant_manage_anything():
 @then(parsers.parse('"{username}" can\'t create users'))
 def cant_create_users(sammy: SammyDriver, username: str):
     assert not sammy.can_create_users(username)
+
+
+@scenario("role-management.feature", "Adding a permission to a role applies to users who are already logged in")
+def test_adding_a_permission_to_a_role_applies_to_users_who_are_already_logged_in():
+    pass
+
+
+@given(parsers.parse('a role "{role}" with no permissions'))
+def a_role_with_no_permissions(sammy: SammyDriver, role: str):
+    sammy.has_role(role, "no permissions")
+
+
+@when(parsers.parse('I let the role "{role}" {permissions}'))
+def i_let_the_role(sammy: SammyDriver, role: str, permissions: str):
+    sammy.grant(role, permissions)
+
+
+@then(parsers.parse('Sammy has recorded that "{actor}" let the role "{role}" {permissions}'))
+def sammy_has_recorded_a_granted_permission(sammy: SammyDriver, actor: str, role: str, permissions: str):
+    assert sammy.has_recorded_for_each(permissions, "permission granted", by=actor, role=role)

@@ -68,6 +68,27 @@ class AccountService:
             self._roles.create(database, name, permissions)
         _record("role created", actor_public_id=acting.public_id, role=name)
 
+    def grant_as(self, actor: Session | None, role: str, permissions: list[str]) -> None:
+        """Lets a role do more, on behalf of whoever holds `actor`, and records
+        who did it. It applies straight away, including to sessions its
+        holders already have, because permissions are checked on every
+        request."""
+        with self._engine.begin() as database:
+            acting = self._acting(database, actor)
+            self._require(database, acting, MANAGE_ROLES)
+            role_id = self._roles.find_id(database, role)
+            if role_id is None:
+                raise UnknownRole
+            for permission in permissions:
+                self._roles.grant(database, role_id, permission)
+        for permission in permissions:
+            _record(
+                "permission granted",
+                actor_public_id=acting.public_id,
+                role=role,
+                permission=permission,
+            )
+
     def give_role_as(self, actor: Session | None, username: str, role: str) -> None:
         """Gives a user a role on behalf of whoever holds `actor`, and records
         who did it. Refused if they already hold it."""

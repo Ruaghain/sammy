@@ -128,6 +128,17 @@ class SammyDriver:
         goes through create_role()."""
         self._accounts.create_role(role, _permission_names(permissions))
 
+    def grant(self, role: str, permissions: str) -> None:
+        """Lets a role do more, as "me", from a phrase such as "manage users"."""
+        self._accounts.grant_as(self._session, role, _permission_names(permissions))
+
+    def has_recorded_for_each(self, permissions: str, event: str, **fields) -> bool:
+        """has_recorded, once for each permission the phrase names."""
+        return all(
+            self.has_recorded(event, permission=permission, **fields)
+            for permission in _permission_names(permissions)
+        )
+
     def can_create_roles(self, username: str) -> bool:
         """Tries to create a role as this person, as can_create_users does for
         users."""
