@@ -1,3 +1,4 @@
+import pytest
 from pytest_bdd import given, parsers, scenario, then, when
 
 from drivers.sammy import SammyDriver
@@ -148,3 +149,16 @@ def i_am_told_the_role_name_is_already_taken(sammy: SammyDriver):
 @then(parsers.parse('the role "{role}" still has no permissions'))
 def the_role_still_has_no_permissions(sammy: SammyDriver, role: str):
     assert sammy.permissions_of(role) == set()
+
+
+@pytest.mark.built_examples(
+    {"permission": "fly the plane"},
+)
+@scenario("role-management.feature", "A role can't be given a permission that doesn't exist")
+def test_a_role_cant_be_given_a_permission_that_doesnt_exist():
+    pass
+
+
+@then("I am told the permission doesn't exist")
+def i_am_told_the_permission_doesnt_exist(sammy: SammyDriver):
+    assert sammy.permission_was_unknown()

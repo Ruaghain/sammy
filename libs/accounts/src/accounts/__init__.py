@@ -13,6 +13,7 @@ from accounts.errors import (
     RoleInUse,
     RoleNameTaken,
     SetupAlreadyDone,
+    UnknownPermission,
     UnknownRole,
     UsernameTaken,
 )
@@ -33,6 +34,7 @@ __all__ = [
     "RoleNameTaken",
     "Session",
     "SetupAlreadyDone",
+    "UnknownPermission",
     "UnknownRole",
     "UsernameTaken",
     "migrate",
