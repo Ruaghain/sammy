@@ -142,6 +142,16 @@ class SammyDriver:
         except AdminRoleIsFixed:
             self._admin_role_protected = True
 
+    def delete_role(self, role: str) -> None:
+        """Deletes a role as "me"."""
+        try:
+            self._accounts.delete_role_as(self._session, role)
+        except AdminRoleIsFixed:
+            self._admin_role_protected = True
+
+    def role_exists(self, role: str) -> bool:
+        return self._accounts.role_exists(role)
+
     def admin_role_was_protected(self) -> bool:
         return self._admin_role_protected
 

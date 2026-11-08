@@ -113,6 +113,23 @@ class AccountService:
                 permission=permission,
             )
 
+    def delete_role_as(self, actor: Session | None, role: str) -> None:
+        """Deletes a role on behalf of whoever holds `actor`. The built-in
+        admin role can never be deleted."""
+        with self._engine.begin() as database:
+            acting = self._acting(database, actor)
+            self._require(database, acting, MANAGE_ROLES)
+            if role == ADMIN_ROLE:
+                raise AdminRoleIsFixed
+        # What deleting any other role does is specified by later scenarios
+        # (#133, #134).
+        raise NotImplementedError("Deleting roles isn't built yet")
+
+    def role_exists(self, role: str) -> bool:
+        """Whether a role with this name exists."""
+        with self._engine.connect() as database:
+            return self._roles.find_id(database, role) is not None
+
     def give_role_as(self, actor: Session | None, username: str, role: str) -> None:
         """Gives a user a role on behalf of whoever holds `actor`, and records
         who did it. Refused if they already hold it."""

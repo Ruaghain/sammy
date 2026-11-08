@@ -93,3 +93,18 @@ def test_the_admin_role_cant_be_changed():
 @then("I am told the admin role can't be changed")
 def i_am_told_the_admin_role_cant_be_changed(sammy: SammyDriver):
     assert sammy.admin_role_was_protected()
+
+
+@scenario("role-management.feature", "The admin role can't be deleted")
+def test_the_admin_role_cant_be_deleted():
+    pass
+
+
+@when(parsers.parse('I delete the role "{role}"'))
+def i_delete_the_role(sammy: SammyDriver, role: str):
+    sammy.delete_role(role)
+
+
+@then(parsers.parse('the role "{role}" still exists'))
+def the_role_still_exists(sammy: SammyDriver, role: str):
+    assert sammy.role_exists(role)
