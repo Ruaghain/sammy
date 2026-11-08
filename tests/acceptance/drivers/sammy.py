@@ -11,6 +11,7 @@ import logging
 from sqlalchemy import MetaData, create_engine, func, select
 
 from accounts import (
+    AdminRoleIsFixed,
     LastManagerRequired,
     LoginRefused,
     LoginRequired,
@@ -45,6 +46,7 @@ class SammyDriver:
         self._permission_denied = False
         self._last_manager_protected = False
         self._role_already_held = False
+        self._admin_role_protected = False
         # Passwords of the users this driver created, so it can act as them.
         self._passwords: dict[str, str] = {}
         self._probes = 0
@@ -135,7 +137,13 @@ class SammyDriver:
     def revoke(self, role: str, permissions: str) -> None:
         """Stops a role doing something, as "me", from a phrase such as
         "managing users"."""
-        self._accounts.revoke_as(self._session, role, _permission_names_doing(permissions))
+        try:
+            self._accounts.revoke_as(self._session, role, _permission_names_doing(permissions))
+        except AdminRoleIsFixed:
+            self._admin_role_protected = True
+
+    def admin_role_was_protected(self) -> bool:
+        return self._admin_role_protected
 
     def has_recorded_for_each(
         self, permissions: str, event: str, phrased_as: str = "do", **fields

@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from accounts.audit import record as _record
 from accounts.audit import record_about_nobody
 from accounts.errors import (
+    AdminRoleIsFixed,
     LastManagerRequired,
     LoginRefused,
     LoginRequired,
@@ -96,6 +97,9 @@ class AccountService:
         with self._engine.begin() as database:
             acting = self._acting(database, actor)
             self._require(database, acting, MANAGE_ROLES)
+            if role == ADMIN_ROLE:
+                # Always has every permission (see CLAUDE.md, Stored data).
+                raise AdminRoleIsFixed
             role_id = self._roles.find_id(database, role)
             if role_id is None:
                 raise UnknownRole

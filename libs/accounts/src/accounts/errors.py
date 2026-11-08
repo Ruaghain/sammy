@@ -37,5 +37,10 @@ class LastManagerRequired(AccountsError):
     users and roles."""
 
 
+class AdminRoleIsFixed(AccountsError):
+    """Raised when trying to change or delete the built-in admin role, which
+    always has every permission."""
+
+
 class RoleAlreadyHeld(AccountsError):
     """Raised when giving someone a role they already hold."""
