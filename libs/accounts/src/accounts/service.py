@@ -115,8 +115,8 @@ class AccountService:
             )
 
     def delete_role_as(self, actor: Session | None, role: str) -> None:
-        """Deletes a role on behalf of whoever holds `actor`. The built-in
-        admin role can never be deleted."""
+        """Deletes a role nobody holds, on behalf of whoever holds `actor`, and
+        records who did it. The built-in admin role can never be deleted."""
         with self._engine.begin() as database:
             acting = self._acting(database, actor)
             self._require(database, acting, MANAGE_ROLES)
@@ -128,8 +128,8 @@ class AccountService:
             # Refused rather than taking the role away from its holders.
             if self._roles.is_held(database, role_id):
                 raise RoleInUse
-        # Deleting a role nobody holds is specified by #134.
-        raise NotImplementedError("Deleting roles isn't built yet")
+            self._roles.delete(database, role_id)
+        _record("role deleted", actor_public_id=acting.public_id, role=role)
 
     def role_exists(self, role: str) -> bool:
         """Whether a role with this name exists."""
