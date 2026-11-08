@@ -194,6 +194,10 @@ def can_still_create_roles(sammy: SammyDriver, username: str):
         "action": 'create the role "viewer" that can view agents',
         "unchanged": 'the role "viewer" doesn\'t exist',
     },
+    {
+        "action": 'let the role "helper" manage users',
+        "unchanged": 'the role "helper" still has no permissions',
+    },
 )
 @scenario("role-management.feature", "Only users who can manage roles can change them")
 def test_only_users_who_can_manage_roles_can_change_them():

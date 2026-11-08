@@ -154,7 +154,10 @@ class SammyDriver:
 
     def grant(self, role: str, permissions: str) -> None:
         """Lets a role do more, as "me", from a phrase such as "manage users"."""
-        self._accounts.grant_as(self._session, role, _permission_names(permissions))
+        try:
+            self._accounts.grant_as(self._session, role, _permission_names(permissions))
+        except PermissionDenied:
+            self._permission_denied = True
 
     def revoke(self, role: str, permissions: str) -> None:
         """Stops a role doing something, as "me", from a phrase such as
