@@ -51,6 +51,12 @@ class RoleService:
             )
         )
 
+    def delete(self, database: Connection, role_id: int) -> None:
+        """Deletes the role and what it allowed. Nobody may hold it: callers
+        check is_held first."""
+        database.execute(delete(role_permissions).where(role_permissions.c.role_id == role_id))
+        database.execute(delete(roles).where(roles.c.id == role_id))
+
     def is_held(self, database: Connection, role_id: int) -> bool:
         """Whether anyone holds this role."""
         return (

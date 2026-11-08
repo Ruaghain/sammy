@@ -118,3 +118,18 @@ def test_a_role_that_someone_holds_cant_be_deleted():
 @then("I am told the role is still in use")
 def i_am_told_the_role_is_still_in_use(sammy: SammyDriver):
     assert sammy.role_was_in_use()
+
+
+@scenario("role-management.feature", "A role that nobody holds can be deleted")
+def test_a_role_that_nobody_holds_can_be_deleted():
+    pass
+
+
+@then(parsers.parse('the role "{role}" doesn\'t exist'))
+def the_role_doesnt_exist(sammy: SammyDriver, role: str):
+    assert not sammy.role_exists(role)
+
+
+@then(parsers.parse('Sammy has recorded that "{actor}" deleted the role "{role}"'))
+def sammy_has_recorded_that_someone_deleted_a_role(sammy: SammyDriver, actor: str, role: str):
+    assert sammy.has_recorded("role deleted", by=actor, role=role)
