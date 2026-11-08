@@ -1,4 +1,4 @@
-# sammy
+# bootstrap
 
 How Sammy starts, whatever starts it (the `sammy` command now, the web
 backend later): settings from the environment and `.env`, the log file, the

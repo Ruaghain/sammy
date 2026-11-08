@@ -5,9 +5,9 @@ requires-python = ">=3.14"
 [manifest]
 members = [
     "accounts",
+    "bootstrap",
+    "cli",
     "orchestrator-agent",
-    "sammy",
-    "sammy-cli",
 ]
 
 [manifest.dependency-groups]
@@ -247,6 +247,25 @@ wheels = [
 ]
 
 [[package]]
+name = "bootstrap"
+version = "0.1.0"
+source = { editable = "libs/bootstrap" }
+dependencies = [
+    { name = "accounts" },
+    { name = "orchestrator-agent" },
+    { name = "python-dotenv" },
+    { name = "sqlalchemy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "accounts", editable = "libs/accounts" },
+    { name = "orchestrator-agent", editable = "agent/orchestrator-agent" },
+    { name = "python-dotenv", specifier = ">=1.2.4" },
+    { name = "sqlalchemy", specifier = ">=2.1.6" },
+]
+
+[[package]]
 name = "cffi"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -304,6 +323,17 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/9b/b5/ba2b299993c26577d529b6ae29841f9e15b9fcf004d65f423f4fcf94ade9/cffi-2.1.1-cp315-cp315t-win_amd64.whl", hash = "sha256:d9c275eaacd24aa73f94ffd6de08fc3f932424d8b6c376f4bed7cde376fe7bc3", size = 193772, upload-time = "2026-08-03T21:21:12.39Z" },
     { url = "https://files.pythonhosted.org/packages/aa/29/35e016098c814cd93de9cd320c66b5bfba14dc6ecedd3cb518fa7c408c69/cffi-2.1.1-cp315-cp315t-win_arm64.whl", hash = "sha256:d18e5ac0f2f03f4f518d3e23db0f0cad7faa1da8620e9c09461d443bbf6e6692", size = 186360, upload-time = "2026-08-03T21:21:13.636Z" },
 ]
+
+[[package]]
+name = "cli"
+version = "0.1.0"
+source = { editable = "apps/cli" }
+dependencies = [
+    { name = "bootstrap" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "bootstrap", editable = "libs/bootstrap" }]
 
 [[package]]
 name = "click"
@@ -922,36 +952,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/c0/8f/0722ca900cc807c13
 wheels = [
     { url = "https://files.pythonhosted.org/packages/82/3b/64d4899d73f91ba49a8c18a8ff3f0ea8f1c1d75481760df8c68ef5235bf5/rich-15.0.0-py3-none-any.whl", hash = "sha256:33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb", size = 310654, upload-time = "2026-04-12T08:24:02.83Z" },
 ]
-
-[[package]]
-name = "sammy"
-version = "0.1.0"
-source = { editable = "libs/sammy" }
-dependencies = [
-    { name = "accounts" },
-    { name = "orchestrator-agent" },
-    { name = "python-dotenv" },
-    { name = "sqlalchemy" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "accounts", editable = "libs/accounts" },
-    { name = "orchestrator-agent", editable = "agent/orchestrator-agent" },
-    { name = "python-dotenv", specifier = ">=1.2.4" },
-    { name = "sqlalchemy", specifier = ">=2.1.6" },
-]
-
-[[package]]
-name = "sammy-cli"
-version = "0.1.0"
-source = { editable = "cli" }
-dependencies = [
-    { name = "sammy" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "sammy", editable = "libs/sammy" }]
 
 [[package]]
 name = "six"

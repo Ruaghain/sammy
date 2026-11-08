@@ -21,7 +21,7 @@ from accounts import (
     UnknownRole,
     UsernameTaken,
 )
-from sammy import start
+from bootstrap import start
 
 
 class SammyDriver:
