@@ -14,6 +14,7 @@ from accounts.errors import (
     PermissionDenied,
     RoleAlreadyHeld,
     RoleInUse,
+    RoleNameTaken,
     SetupAlreadyDone,
     UnknownRole,
     UsernameTaken,
@@ -64,10 +65,14 @@ class AccountService:
     def create_role_as(self, actor: Session | None, name: str, permissions: list[str]) -> None:
         """Creates a role granting these permissions, on behalf of whoever
         holds `actor`, and records who did it."""
-        with self._engine.begin() as database:
-            acting = self._acting(database, actor)
-            self._require(database, acting, MANAGE_ROLES)
-            self._roles.create(database, name, permissions)
+        try:
+            with self._engine.begin() as database:
+                acting = self._acting(database, actor)
+                self._require(database, acting, MANAGE_ROLES)
+                self._roles.create(database, name, permissions)
+        except IntegrityError:
+            # roles.name's unique constraint is the check, as with usernames.
+            raise RoleNameTaken from None
         _record("role created", actor_public_id=acting.public_id, role=name)
 
     def grant_as(self, actor: Session | None, role: str, permissions: list[str]) -> None:
@@ -130,6 +135,12 @@ class AccountService:
                 raise RoleInUse
             self._roles.delete(database, role_id)
         _record("role deleted", actor_public_id=acting.public_id, role=role)
+
+    def permissions_of(self, role: str) -> set[str]:
+        """What a role grants, or an empty set if there's no such role."""
+        with self._engine.connect() as database:
+            role_id = self._roles.find_id(database, role)
+            return self._roles.permissions(database, role_id) if role_id is not None else set()
 
     def role_exists(self, role: str) -> bool:
         """Whether a role with this name exists."""

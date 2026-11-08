@@ -18,6 +18,7 @@ from accounts import (
     PermissionDenied,
     RoleAlreadyHeld,
     RoleInUse,
+    RoleNameTaken,
     Session,
     SetupAlreadyDone,
     UnknownRole,
@@ -49,6 +50,7 @@ class SammyDriver:
         self._role_already_held = False
         self._admin_role_protected = False
         self._role_in_use = False
+        self._role_name_taken = False
         # Passwords of the users this driver created, so it can act as them.
         self._passwords: dict[str, str] = {}
         self._probes = 0
@@ -125,7 +127,16 @@ class SammyDriver:
     def create_role(self, role: str, permissions: str) -> None:
         """Creates a role as "me", from a phrase such as "manage users" or
         "manage users and roles"."""
-        self._accounts.create_role_as(self._session, role, _permission_names(permissions))
+        try:
+            self._accounts.create_role_as(self._session, role, _permission_names(permissions))
+        except RoleNameTaken:
+            self._role_name_taken = True
+
+    def role_name_was_taken(self) -> bool:
+        return self._role_name_taken
+
+    def permissions_of(self, role: str) -> set[str]:
+        return self._accounts.permissions_of(role)
 
     def has_role(self, role: str, permissions: str) -> None:
         """Sets up a role directly, as a Given; creating a role as an admin
