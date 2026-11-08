@@ -161,6 +161,8 @@ class SammyDriver:
             self._accounts.revoke_as(self._session, role, _permission_names_doing(permissions))
         except AdminRoleIsFixed:
             self._admin_role_protected = True
+        except LastManagerRequired:
+            self._last_manager_protected = True
 
     def delete_role(self, role: str) -> None:
         """Deletes a role as "me"."""

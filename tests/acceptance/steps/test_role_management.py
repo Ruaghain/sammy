@@ -162,3 +162,28 @@ def test_a_role_cant_be_given_a_permission_that_doesnt_exist():
 @then("I am told the permission doesn't exist")
 def i_am_told_the_permission_doesnt_exist(sammy: SammyDriver):
     assert sammy.permission_was_unknown()
+
+
+@scenario("role-management.feature", "The last user who can manage roles keeps that permission")
+def test_the_last_user_who_can_manage_roles_keeps_that_permission():
+    pass
+
+
+@given(parsers.parse('I am logged in as "{username}", who has the "{role}" role'))
+def i_am_logged_in_as_someone_with_the_role(sammy: SammyDriver, username: str, role: str):
+    sammy.add_user(username, "correct-horse")
+    sammy.has_been_given_role(username, role)
+    sammy.log_in(username, "correct-horse")
+
+
+@given(parsers.parse('"{username}" is the only active user who can manage users and roles'))
+def is_the_only_user_who_can_manage(sammy: SammyDriver, username: str):
+    # Confirms the stated situation before going on: nobody else exists yet.
+    assert sammy.user_count() == 1
+    assert sammy.can_create_users(username)
+    assert sammy.can_create_roles(username)
+
+
+@then(parsers.parse('"{username}" can still create roles'))
+def can_still_create_roles(sammy: SammyDriver, username: str):
+    assert sammy.can_create_roles(username)

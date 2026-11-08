@@ -114,6 +114,10 @@ class AccountService:
                 raise UnknownRole
             for permission in permissions:
                 self._roles.revoke(database, role_id, permission)
+            # Checked after the change, inside the transaction: raising rolls
+            # it back.
+            if not self._roles.someone_can_manage(database, self._users.active_ids(database)):
+                raise LastManagerRequired
         for permission in permissions:
             _record(
                 "permission revoked",
