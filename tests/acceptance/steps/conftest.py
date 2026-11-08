@@ -94,3 +94,9 @@ def can_no_longer_create_users(sammy: SammyDriver, username: str):
 @then(parsers.parse('"{username}" can still create users'))
 def can_still_create_users(sammy: SammyDriver, username: str):
     assert sammy.can_create_users(username)
+
+
+@given(parsers.parse('a user "{username}" with the "{role}" role'))
+def a_user_with_the_role(sammy: SammyDriver, username: str, role: str):
+    sammy.add_user(username, "correct-horse")
+    sammy.has_been_given_role(username, role)

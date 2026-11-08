@@ -259,9 +259,3 @@ def sammy_has_recorded_that_someone_disabled_a_user(sammy: SammyDriver, actor: s
 @then(parsers.parse('I am told "{username}" already has the "{role}" role'))
 def i_am_told_they_already_have_the_role(sammy: SammyDriver, username: str, role: str):
     assert sammy.role_was_already_held()
-
-
-@given(parsers.parse('a user "{username}" with the "{role}" role'))
-def a_user_with_the_role(sammy: SammyDriver, username: str, role: str):
-    sammy.add_user(username, "correct-horse")
-    sammy.has_been_given_role(username, role)

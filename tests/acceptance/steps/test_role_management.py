@@ -108,3 +108,13 @@ def i_delete_the_role(sammy: SammyDriver, role: str):
 @then(parsers.parse('the role "{role}" still exists'))
 def the_role_still_exists(sammy: SammyDriver, role: str):
     assert sammy.role_exists(role)
+
+
+@scenario("role-management.feature", "A role that someone holds can't be deleted")
+def test_a_role_that_someone_holds_cant_be_deleted():
+    pass
+
+
+@then("I am told the role is still in use")
+def i_am_told_the_role_is_still_in_use(sammy: SammyDriver):
+    assert sammy.role_was_in_use()

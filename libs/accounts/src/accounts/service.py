@@ -13,6 +13,7 @@ from accounts.errors import (
     LoginRequired,
     PermissionDenied,
     RoleAlreadyHeld,
+    RoleInUse,
     SetupAlreadyDone,
     UnknownRole,
     UsernameTaken,
@@ -121,8 +122,13 @@ class AccountService:
             self._require(database, acting, MANAGE_ROLES)
             if role == ADMIN_ROLE:
                 raise AdminRoleIsFixed
-        # What deleting any other role does is specified by later scenarios
-        # (#133, #134).
+            role_id = self._roles.find_id(database, role)
+            if role_id is None:
+                raise UnknownRole
+            # Refused rather than taking the role away from its holders.
+            if self._roles.is_held(database, role_id):
+                raise RoleInUse
+        # Deleting a role nobody holds is specified by #134.
         raise NotImplementedError("Deleting roles isn't built yet")
 
     def role_exists(self, role: str) -> bool:
