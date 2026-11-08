@@ -36,3 +36,13 @@ def a_role_that_can(sammy: SammyDriver, role: str, permissions: str):
 @then(parsers.parse('"{username}" can create roles'))
 def can_create_roles(sammy: SammyDriver, username: str):
     assert sammy.can_create_roles(username)
+
+
+@scenario("role-management.feature", "A user with no roles can log in but can't manage anything")
+def test_a_user_with_no_roles_can_log_in_but_cant_manage_anything():
+    pass
+
+
+@then(parsers.parse('"{username}" can\'t create users'))
+def cant_create_users(sammy: SammyDriver, username: str):
+    assert not sammy.can_create_users(username)
