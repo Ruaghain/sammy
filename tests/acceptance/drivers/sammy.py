@@ -21,6 +21,7 @@ from accounts import (
     RoleNameTaken,
     Session,
     SetupAlreadyDone,
+    UnknownPermission,
     UnknownRole,
     UsernameTaken,
 )
@@ -51,6 +52,7 @@ class SammyDriver:
         self._admin_role_protected = False
         self._role_in_use = False
         self._role_name_taken = False
+        self._permission_unknown = False
         # Passwords of the users this driver created, so it can act as them.
         self._passwords: dict[str, str] = {}
         self._probes = 0
@@ -131,6 +133,11 @@ class SammyDriver:
             self._accounts.create_role_as(self._session, role, _permission_names(permissions))
         except RoleNameTaken:
             self._role_name_taken = True
+        except UnknownPermission:
+            self._permission_unknown = True
+
+    def permission_was_unknown(self) -> bool:
+        return self._permission_unknown
 
     def role_name_was_taken(self) -> bool:
         return self._role_name_taken

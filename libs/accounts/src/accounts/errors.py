@@ -19,6 +19,10 @@ class UsernameTaken(AccountsError):
     """Raised when creating a user whose username is already in use."""
 
 
+class UnknownPermission(AccountsError):
+    """Raised when a permission is named that Sammy doesn't have."""
+
+
 class UnknownRole(AccountsError):
     """Raised when a role is named that doesn't exist."""
 

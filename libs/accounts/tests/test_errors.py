@@ -14,7 +14,7 @@ def test_every_refusal_from_accounts_is_an_accounts_error():
         and value is not AccountsError
     ]
 
-    assert len(refusals) == 11  # every refusal, LoginRequired included
+    assert len(refusals) == 12  # every refusal, LoginRequired included
     assert all(issubclass(refusal, AccountsError) for refusal in refusals)
     # ...and each is importable straight from accounts, as before.
     assert all(getattr(accounts, refusal.__name__) is refusal for refusal in refusals)

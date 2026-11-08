@@ -16,11 +16,12 @@ from accounts.errors import (
     RoleInUse,
     RoleNameTaken,
     SetupAlreadyDone,
+    UnknownPermission,
     UnknownRole,
     UsernameTaken,
 )
 from accounts.passwords import check_password, unknown_user_hash
-from accounts.roles import MANAGE_ROLES, MANAGE_USERS, RoleService
+from accounts.roles import MANAGE_ROLES, MANAGE_USERS, RoleService, is_permission
 from accounts.sessions import Session, SessionService
 from accounts.tables import ADMIN_ROLE
 from accounts.users import UserService
@@ -69,6 +70,8 @@ class AccountService:
             with self._engine.begin() as database:
                 acting = self._acting(database, actor)
                 self._require(database, acting, MANAGE_ROLES)
+                if not all(is_permission(permission) for permission in permissions):
+                    raise UnknownPermission
                 self._roles.create(database, name, permissions)
         except IntegrityError:
             # roles.name's unique constraint is the check, as with usernames.
