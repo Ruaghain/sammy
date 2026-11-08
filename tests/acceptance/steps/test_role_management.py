@@ -66,3 +66,20 @@ def i_let_the_role(sammy: SammyDriver, role: str, permissions: str):
 @then(parsers.parse('Sammy has recorded that "{actor}" let the role "{role}" {permissions}'))
 def sammy_has_recorded_a_granted_permission(sammy: SammyDriver, actor: str, role: str, permissions: str):
     assert sammy.has_recorded_for_each(permissions, "permission granted", by=actor, role=role)
+
+
+@scenario("role-management.feature", "Removing a permission from a role applies to users who are already logged in")
+def test_removing_a_permission_from_a_role_applies_to_users_who_are_already_logged_in():
+    pass
+
+
+@when(parsers.parse('I stop the role "{role}" from {permissions}'))
+def i_stop_the_role_from(sammy: SammyDriver, role: str, permissions: str):
+    sammy.revoke(role, permissions)
+
+
+@then(parsers.parse('Sammy has recorded that "{actor}" stopped the role "{role}" from {permissions}'))
+def sammy_has_recorded_a_revoked_permission(sammy: SammyDriver, actor: str, role: str, permissions: str):
+    assert sammy.has_recorded_for_each(
+        permissions, "permission revoked", by=actor, role=role, phrased_as="doing"
+    )

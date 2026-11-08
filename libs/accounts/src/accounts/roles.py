@@ -27,6 +27,14 @@ class RoleService:
         """Lets the role do this as well. Everyone holding it can, at once."""
         database.execute(insert(role_permissions).values(role_id=role_id, permission=permission))
 
+    def revoke(self, database: Connection, role_id: int, permission: str) -> None:
+        """Stops the role doing this. Everyone holding it loses it, at once."""
+        database.execute(
+            delete(role_permissions).where(
+                role_permissions.c.role_id == role_id, role_permissions.c.permission == permission
+            )
+        )
+
     def find_id(self, database: Connection, name: str) -> int | None:
         """The id of the role with this name, or None if there's no such role."""
         return database.execute(select(roles.c.id).where(roles.c.name == name)).scalar_one_or_none()

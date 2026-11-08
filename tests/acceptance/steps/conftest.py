@@ -84,3 +84,8 @@ def has_been_given_the_role(sammy: SammyDriver, username: str, role: str):
 @then(parsers.parse('I am logged in as "{username}"'))
 def i_am_logged_in_as(sammy: SammyDriver, username: str):
     assert sammy.logged_in_user() == username
+
+
+@then(parsers.parse('"{username}" can no longer create users'))
+def can_no_longer_create_users(sammy: SammyDriver, username: str):
+    assert not sammy.can_create_users(username)
