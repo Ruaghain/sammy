@@ -133,3 +133,18 @@ def the_role_doesnt_exist(sammy: SammyDriver, role: str):
 @then(parsers.parse('Sammy has recorded that "{actor}" deleted the role "{role}"'))
 def sammy_has_recorded_that_someone_deleted_a_role(sammy: SammyDriver, actor: str, role: str):
     assert sammy.has_recorded("role deleted", by=actor, role=role)
+
+
+@scenario("role-management.feature", "A role name can only be used once")
+def test_a_role_name_can_only_be_used_once():
+    pass
+
+
+@then("I am told the role name is already taken")
+def i_am_told_the_role_name_is_already_taken(sammy: SammyDriver):
+    assert sammy.role_name_was_taken()
+
+
+@then(parsers.parse('the role "{role}" still has no permissions'))
+def the_role_still_has_no_permissions(sammy: SammyDriver, role: str):
+    assert sammy.permissions_of(role) == set()

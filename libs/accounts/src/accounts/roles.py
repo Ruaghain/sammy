@@ -57,6 +57,15 @@ class RoleService:
         database.execute(delete(role_permissions).where(role_permissions.c.role_id == role_id))
         database.execute(delete(roles).where(roles.c.id == role_id))
 
+    def permissions(self, database: Connection, role_id: int) -> set[str]:
+        """What this role grants (the admin role grants everything without
+        listing it)."""
+        return set(
+            database.execute(
+                select(role_permissions.c.permission).where(role_permissions.c.role_id == role_id)
+            ).scalars()
+        )
+
     def is_held(self, database: Connection, role_id: int) -> bool:
         """Whether anyone holds this role."""
         return (

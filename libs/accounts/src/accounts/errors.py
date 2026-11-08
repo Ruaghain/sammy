@@ -46,5 +46,9 @@ class RoleInUse(AccountsError):
     """Raised when deleting a role that someone still holds."""
 
 
+class RoleNameTaken(AccountsError):
+    """Raised when creating a role whose name is already in use."""
+
+
 class RoleAlreadyHeld(AccountsError):
     """Raised when giving someone a role they already hold."""
