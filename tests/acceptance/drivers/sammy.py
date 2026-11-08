@@ -137,6 +137,8 @@ class SammyDriver:
             self._permission_unknown = True
         except PermissionDenied:
             self._permission_denied = True
+        except LoginRequired:
+            self._asked_to_log_in = True
 
     def permission_was_unknown(self) -> bool:
         return self._permission_unknown
