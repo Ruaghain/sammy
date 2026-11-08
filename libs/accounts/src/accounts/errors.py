@@ -42,5 +42,9 @@ class AdminRoleIsFixed(AccountsError):
     always has every permission."""
 
 
+class RoleInUse(AccountsError):
+    """Raised when deleting a role that someone still holds."""
+
+
 class RoleAlreadyHeld(AccountsError):
     """Raised when giving someone a role they already hold."""

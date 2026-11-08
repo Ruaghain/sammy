@@ -51,6 +51,13 @@ class RoleService:
             )
         )
 
+    def is_held(self, database: Connection, role_id: int) -> bool:
+        """Whether anyone holds this role."""
+        return (
+            database.execute(select(user_roles.c.user_id).where(user_roles.c.role_id == role_id)).first()
+            is not None
+        )
+
     def names_of(self, database: Connection, user_id: int) -> set[str]:
         """The names of the roles this user holds."""
         return set(

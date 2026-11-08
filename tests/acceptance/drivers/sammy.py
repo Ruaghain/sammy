@@ -17,6 +17,7 @@ from accounts import (
     LoginRequired,
     PermissionDenied,
     RoleAlreadyHeld,
+    RoleInUse,
     Session,
     SetupAlreadyDone,
     UnknownRole,
@@ -47,6 +48,7 @@ class SammyDriver:
         self._last_manager_protected = False
         self._role_already_held = False
         self._admin_role_protected = False
+        self._role_in_use = False
         # Passwords of the users this driver created, so it can act as them.
         self._passwords: dict[str, str] = {}
         self._probes = 0
@@ -148,6 +150,11 @@ class SammyDriver:
             self._accounts.delete_role_as(self._session, role)
         except AdminRoleIsFixed:
             self._admin_role_protected = True
+        except RoleInUse:
+            self._role_in_use = True
+
+    def role_was_in_use(self) -> bool:
+        return self._role_in_use
 
     def role_exists(self, role: str) -> bool:
         return self._accounts.role_exists(role)
