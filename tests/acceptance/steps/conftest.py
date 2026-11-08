@@ -105,3 +105,19 @@ def a_user_with_the_role(sammy: SammyDriver, username: str, role: str):
 @then("I am told at least one user must be able to manage users and roles")
 def i_am_told_someone_must_manage(sammy: SammyDriver):
     assert sammy.last_manager_was_protected()
+
+
+@given(parsers.parse('I am logged in as "{username}", who has no roles'))
+def i_am_logged_in_as_someone_with_no_roles(sammy: SammyDriver, username: str):
+    sammy.add_user(username, "correct-horse")
+    sammy.log_in(username, "correct-horse")
+
+
+@then("I am told I don't have permission")
+def i_am_told_i_dont_have_permission(sammy: SammyDriver):
+    assert sammy.permission_was_denied()
+
+
+@then(parsers.parse('Sammy has recorded that "{username}" was refused permission to {permission}'))
+def sammy_has_recorded_a_refused_permission(sammy: SammyDriver, username: str, permission: str):
+    assert sammy.has_recorded("permission refused", username, permission=permission)

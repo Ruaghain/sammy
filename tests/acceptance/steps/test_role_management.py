@@ -187,3 +187,14 @@ def is_the_only_user_who_can_manage(sammy: SammyDriver, username: str):
 @then(parsers.parse('"{username}" can still create roles'))
 def can_still_create_roles(sammy: SammyDriver, username: str):
     assert sammy.can_create_roles(username)
+
+
+@pytest.mark.built_examples(
+    {
+        "action": 'create the role "viewer" that can view agents',
+        "unchanged": 'the role "viewer" doesn\'t exist',
+    },
+)
+@scenario("role-management.feature", "Only users who can manage roles can change them")
+def test_only_users_who_can_manage_roles_can_change_them():
+    pass
