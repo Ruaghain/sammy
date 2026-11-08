@@ -16,15 +16,18 @@ _log = logging.getLogger("accounts")
 
 def record(
     event: str,
-    public_id: uuid.UUID,
+    public_id: uuid.UUID | None = None,
     level: int = logging.INFO,
     actor_public_id: uuid.UUID | None = None,
     **details: str,
 ) -> None:
-    """Logs an event about a user, who did it if someone else did, and any
-    details (e.g. role, permission)."""
-    fields = {"event": event, "public_id": str(public_id)}
-    message, args = "%s: user %s", [event, public_id]
+    """Logs an event: about a user (`public_id`) if it concerns one, who did
+    it if someone else did, and any details (e.g. role, permission)."""
+    fields = {"event": event}
+    message, args = "%s:", [event]
+    if public_id is not None:
+        fields["public_id"] = str(public_id)
+        message, args = message + " user %s", [*args, public_id]
     for name, value in details.items():
         fields[name] = value
         message, args = message + f" {name} %s", [*args, value]

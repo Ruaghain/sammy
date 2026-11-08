@@ -9,13 +9,20 @@ changes with others.
 
 from sqlalchemy import Connection, delete, insert, select
 
-from accounts.tables import ADMIN_ROLE, roles, user_roles
+from accounts.tables import ADMIN_ROLE, role_permissions, roles, user_roles
 
 MANAGE_USERS = "manage users"
 MANAGE_ROLES = "manage roles"
 
 
 class RoleService:
+    def create(self, database: Connection, name: str, permissions: list[str]) -> int:
+        """A new role granting these permissions. Returns its id."""
+        role_id = database.execute(insert(roles).values(name=name).returning(roles.c.id)).scalar_one()
+        for permission in permissions:
+            database.execute(insert(role_permissions).values(role_id=role_id, permission=permission))
+        return role_id
+
     def find_id(self, database: Connection, name: str) -> int | None:
         """The id of the role with this name, or None if there's no such role."""
         return database.execute(select(roles.c.id).where(roles.c.name == name)).scalar_one_or_none()
@@ -43,16 +50,19 @@ class RoleService:
         )
 
     def can(self, database: Connection, user_id: int, permission: str) -> bool:
-        """Whether any of the user's roles allows this. The admin role allows
-        everything; other roles' permissions arrive with role management."""
-        return (
-            database.execute(
-                select(roles.c.id)
-                .join(user_roles, user_roles.c.role_id == roles.c.id)
-                .where(user_roles.c.user_id == user_id, roles.c.name == ADMIN_ROLE)
-            ).first()
-            is not None
-        )
+        """Whether any of the user's roles allows this: the admin role allows
+        everything, any other role what its permissions say."""
+        is_admin = database.execute(
+            select(roles.c.id)
+            .join(user_roles, user_roles.c.role_id == roles.c.id)
+            .where(user_roles.c.user_id == user_id, roles.c.name == ADMIN_ROLE)
+        ).first()
+        granted = database.execute(
+            select(role_permissions.c.role_id)
+            .join(user_roles, user_roles.c.role_id == role_permissions.c.role_id)
+            .where(user_roles.c.user_id == user_id, role_permissions.c.permission == permission)
+        ).first()
+        return is_admin is not None or granted is not None
 
     def someone_can_manage(
         self, database: Connection, active_ids: list[int], excluding: int | None = None

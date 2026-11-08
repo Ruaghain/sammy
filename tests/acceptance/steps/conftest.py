@@ -46,3 +46,24 @@ def sammy_has_recorded_a_refused_login(sammy: SammyDriver, username: str):
 @then(parsers.parse('"{username}" is still logged in'))
 def is_still_logged_in(sammy: SammyDriver, username: str):
     assert sammy.is_logged_in(username)
+
+
+@given(parsers.parse('I am logged in as the admin "{username}"'))
+def i_am_logged_in_as_the_admin(sammy: SammyDriver, username: str):
+    sammy.run_setup(username, "correct-horse")
+    sammy.log_in(username, "correct-horse")
+
+
+@when(parsers.parse('I give "{username}" the "{role}" role'))
+def i_give_the_role(sammy: SammyDriver, username: str, role: str):
+    sammy.give_role(username, role)
+
+
+@then(parsers.parse('"{username}" can create users'))
+def can_create_users(sammy: SammyDriver, username: str):
+    assert sammy.can_create_users(username)
+
+
+@then(parsers.parse('"{username}" has no roles'))
+def has_no_roles(sammy: SammyDriver, username: str):
+    assert sammy.roles_of(username) == set()
