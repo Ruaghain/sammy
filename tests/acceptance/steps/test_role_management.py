@@ -221,3 +221,8 @@ def test_a_roles_permissions_go_only_to_the_people_who_hold_it():
 @scenario("role-management.feature", "Removing a permission affects only that role and that permission")
 def test_removing_a_permission_affects_only_that_role_and_that_permission():
     pass
+
+
+@scenario("role-management.feature", "Deleting a role leaves every other role as it was")
+def test_deleting_a_role_leaves_every_other_role_as_it_was():
+    pass
