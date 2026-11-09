@@ -3,11 +3,12 @@ import uuid
 from alembic import command
 from alembic.config import Config
 from argon2 import PasswordHasher
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 
 from sammy.accounts.schema import MIGRATIONS
 from sammy.accounts import Session
 from sammy.accounts.sessions import token_hash
+from sammy.core import create_engine, migration_connection
 
 
 def database_url(tmp_path) -> str:
@@ -43,7 +44,7 @@ def test_upgrading_from_0001_keeps_users_and_their_sessions(tmp_path, start_acco
     url = database_url(tmp_path)
     token = "an-existing-session-token"
     engine = create_engine(url)
-    with engine.begin() as connection:
+    with migration_connection(engine) as connection:
         config = Config()
         config.set_main_option("script_location", str(MIGRATIONS))
         config.attributes["connection"] = connection
@@ -74,7 +75,7 @@ def test_downgrading_to_0001_keeps_users_and_their_sessions(tmp_path, start_acco
     session = accounts_.log_in("test.user", "correct-horse")
 
     engine = create_engine(url)
-    with engine.begin() as connection:
+    with migration_connection(engine) as connection:
         config = Config()
         config.set_main_option("script_location", str(MIGRATIONS))
         config.attributes["connection"] = connection

@@ -12,6 +12,8 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import Engine
 
+from sammy.core import migration_connection
+
 MIGRATIONS = Path(__file__).parent / "migrations"
 
 
@@ -19,6 +21,6 @@ def migrate(engine: Engine) -> None:
     """Applies any of accounts' migrations not yet applied to this database."""
     config = Config()
     config.set_main_option("script_location", str(MIGRATIONS))
-    with engine.begin() as connection:
+    with migration_connection(engine) as connection:
         config.attributes["connection"] = connection
         command.upgrade(config, "head")
