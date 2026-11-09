@@ -189,6 +189,11 @@ def can_still_create_roles(sammy: SammyDriver, username: str):
     assert sammy.can_create_roles(username)
 
 
+@then(parsers.parse('"{username}" can no longer create roles'))
+def can_no_longer_create_roles(sammy: SammyDriver, username: str):
+    assert not sammy.can_create_roles(username)
+
+
 @pytest.mark.built_examples(
     {
         "action": 'create the role "viewer" that can view agents',

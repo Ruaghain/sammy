@@ -139,7 +139,7 @@ Feature: Managing roles
     And "test.user" is logged in with the "accountant" role
     And "test.late" is logged in with the "late" role
     When I stop the role "accountant" from managing roles
-    Then "test.user" can't create roles
+    Then "test.user" can no longer create roles
     But "test.user" can still create users
     And "test.early" can create roles
     And "test.late" can create roles
@@ -160,6 +160,12 @@ Feature: Managing roles
   Scenario: A new role allows exactly what it was created with
     Given I am logged in as the admin "test.admin"
     And a role "early" that can manage roles
-    And a role "late" that can manage roles
     When I create the role "user manager" that can manage users
+    And I create the role "late" that can manage roles
     Then the role "user manager" allows only managing users
+
+  Scenario: Removing a permission leaves the role's other permissions
+    Given I am logged in as the admin "test.admin"
+    And a role "agent keeper" that can manage agents and roles
+    When I stop the role "agent keeper" from managing roles
+    Then the role "agent keeper" allows only managing agents
