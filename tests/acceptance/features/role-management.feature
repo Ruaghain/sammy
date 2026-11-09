@@ -119,3 +119,48 @@ Feature: Managing roles
     When I create the role "viewer" that can view agents
     Then I am asked to log in
     And the role "viewer" doesn't exist
+
+  Scenario: A role's permissions go only to the people who hold it
+    Given I am logged in as the admin "test.admin"
+    And a role "role manager" that can manage roles
+    And a role "helper" with no permissions
+    And a role "user manager" that can manage users
+    And a user "test.early" with the "role manager" role
+    And a user "test.user" with the "helper" role
+    And a user "test.late" with the "role manager" role
+    Then "test.user" can't create roles
+    And "test.early" can't create users
+
+  Scenario: Removing a permission affects only that role and that permission
+    Given I am logged in as the admin "test.admin"
+    And a role "early" that can manage roles
+    And a role "accountant" that can manage users and roles
+    And a role "late" that can manage roles
+    And "test.early" is logged in with the "early" role
+    And "test.user" is logged in with the "accountant" role
+    And "test.late" is logged in with the "late" role
+    When I stop the role "accountant" from managing roles
+    Then "test.user" can't create roles
+    But "test.user" can still create users
+    And "test.early" can create roles
+    And "test.late" can create roles
+
+  Scenario: Deleting a role leaves every other role as it was
+    Given I am logged in as the admin "test.admin"
+    And a role "early" that can manage roles
+    And a role "accountant" that can manage users
+    And a role "late" that can manage roles
+    And a user "test.early" with the "early" role
+    And a user "test.late" with the "late" role
+    When I delete the role "accountant"
+    Then the role "accountant" doesn't exist
+    And "test.early" can create roles
+    And "test.late" can create roles
+    And "test.admin" can still create users
+
+  Scenario: A new role allows exactly what it was created with
+    Given I am logged in as the admin "test.admin"
+    And a role "early" that can manage roles
+    And a role "late" that can manage roles
+    When I create the role "user manager" that can manage users
+    Then the role "user manager" allows only managing users
