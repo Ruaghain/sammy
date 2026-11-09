@@ -4,6 +4,7 @@ members = [
     "agent/orchestrator-agent",
     "apps/cli",
     "libs/bootstrap",
+    "libs/core",
 ]
 
 [dependency-groups]

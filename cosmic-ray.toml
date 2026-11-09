@@ -14,6 +14,10 @@ excluded-modules = [
     # starts Sammy through it.)
     "libs/bootstrap/src/sammy/bootstrap/config.py",
     "libs/bootstrap/src/sammy/bootstrap/logs.py",
+    # Enforcing foreign keys, and pausing them for migrations: scenarios see
+    # only the mistakes foreign keys catch, never the setting itself, so every
+    # mutant would survive. libs/core/tests covers it.
+    "libs/core/src/sammy/core/database.py",
 ]
 timeout = 30.0
 test-command = "pytest -x -q tests/acceptance"  # survivors must point at scenario gaps, so unit tests do not count

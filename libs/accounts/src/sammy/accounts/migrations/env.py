@@ -8,9 +8,9 @@ SAMMY_DATABASE_URL instead.
 import os
 
 from alembic import context
-from sqlalchemy import create_engine
 
 from sammy.accounts.tables import VERSION_TABLE, metadata
+from sammy.core import create_engine, migration_connection
 
 
 def run_migrations(connection) -> None:
@@ -28,5 +28,5 @@ if connection is not None:
     run_migrations(connection)
 else:
     engine = create_engine(os.environ["SAMMY_DATABASE_URL"])
-    with engine.begin() as connection:
+    with migration_connection(engine) as connection:
         run_migrations(connection)

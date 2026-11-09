@@ -8,8 +8,12 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
 - `agent/<name>/` - one package per agent. Create it from the repo root with
   `uv init --package agent/<name>` (this registers it as a workspace member),
   check its `requires-python` is `">=3.14"`, then `uv sync`.
-- `libs/core/` - shared contracts only (`Agent` protocol, `ModelClient`
-  protocol, model clients). No business logic.
+- `libs/core/` - `sammy.core`: what every package shares, at the bottom of
+  the dependency graph. Today that's `database.py`: `create_engine()`, the
+  only way Sammy creates a database engine, and `migration_connection()`,
+  which every package's migrations run on (see Stored data). Later, shared
+  contracts (`Agent` protocol, `ModelClient` protocol, model clients). No
+  business logic.
 - `libs/accounts/` - users and login. Not an agent, and it holds business
   logic, so it doesn't belong in `libs/core/`. Product code: it follows the
   ATDD loop and is mutation tested. Create it with
@@ -68,11 +72,13 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   whether they're allowed, enforces rules that span services (e.g. someone
   can always manage users and roles) and logs events. It contains no SQL.
 - Sammy has one database. Whatever starts Sammy (CLI, web backend, the
-  acceptance driver) creates the one SQLAlchemy engine and passes it to each
-  package's top-level service; packages never connect by themselves.
+  acceptance driver) creates the one SQLAlchemy engine, with
+  `sammy.core.create_engine`, and passes it to each package's top-level
+  service; packages never connect by themselves.
 - Each package migrates only its own tables, with its own `migrate(engine)`
   (e.g. `sammy.accounts.migrate`), run explicitly at startup before any of its
-  services are created. Creating a service never changes the schema.
+  services are created, on `sammy.core.migration_connection(engine)`.
+  Creating a service never changes the schema.
 - Each package keeps its own exceptions in `errors.py`, under one common base
   (e.g. `AccountsError`) so callers can handle them all at once.
 - A helper shared by more than one package (e.g. `audit`) moves to
@@ -117,6 +123,12 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   - `postgresql+psycopg://user:password@host/database`
 - Write queries with SQLAlchemy Core so they run unchanged on both. Nothing
   may be specific to one database.
+- Foreign keys are enforced on both. PostgreSQL always enforces them; SQLite
+  only when each connection asks, so `sammy.core.create_engine` asks on every
+  SQLite connection. Migrations are the exception: SQLite changes most columns
+  by rebuilding the table, which enforced foreign keys refuse, so
+  `migration_connection()` turns them off for that one connection and only
+  commits if `PRAGMA foreign_key_check` finds no row pointing at nothing.
 - The schema is created and changed only by Alembic migrations, which Sammy
   applies itself at startup through each package's `migrate(engine)` (see
   Code structure). `sammy.accounts` keeps its migrations in
@@ -357,7 +369,9 @@ Every behavioural change goes through this loop, one scenario at a time:
   - `apps/cli/`: no scenario drives Sammy through the `sammy` command yet.
     Add `apps` to `module-path` once scenarios use it.
   - `libs/bootstrap`'s `config.py` (reading settings) and `logs.py` (the log
-    file), listed in `excluded-modules`.
+    file), and `libs/core`'s `database.py` (creating engines and migration
+    connections), listed in `excluded-modules`. Scenarios see only the
+    mistakes foreign keys catch, never the setting itself.
   `web/` has no mutation coverage yet — out of scope until/unless a JS
   equivalent (Stryker) gets added.
 - New scenarios or `Examples` rows to kill survivors are still acceptance

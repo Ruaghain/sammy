@@ -10,7 +10,8 @@ from dataclasses import dataclass
 
 from sammy.accounts import AccountService, migrate
 from sammy.agents.orchestrator import Orchestrator
-from sqlalchemy import Engine, create_engine
+from sammy.core import create_engine
+from sqlalchemy import Engine
 
 
 @dataclass

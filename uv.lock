@@ -7,6 +7,7 @@ members = [
     "accounts",
     "bootstrap",
     "cli",
+    "core",
     "orchestrator-agent",
 ]
 
@@ -24,6 +25,7 @@ source = { editable = "libs/accounts" }
 dependencies = [
     { name = "alembic" },
     { name = "argon2-cffi" },
+    { name = "core" },
     { name = "psycopg", extra = ["binary"] },
     { name = "sqlalchemy" },
 ]
@@ -32,6 +34,7 @@ dependencies = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.20.1" },
     { name = "argon2-cffi", specifier = ">=25.1.0" },
+    { name = "core", editable = "libs/core" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.8" },
     { name = "sqlalchemy", specifier = ">=2.1.6" },
 ]
@@ -252,6 +255,7 @@ version = "0.1.0"
 source = { editable = "libs/bootstrap" }
 dependencies = [
     { name = "accounts" },
+    { name = "core" },
     { name = "orchestrator-agent" },
     { name = "python-dotenv" },
     { name = "sqlalchemy" },
@@ -260,6 +264,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "accounts", editable = "libs/accounts" },
+    { name = "core", editable = "libs/core" },
     { name = "orchestrator-agent", editable = "agent/orchestrator-agent" },
     { name = "python-dotenv", specifier = ">=1.2.4" },
     { name = "sqlalchemy", specifier = ">=2.1.6" },
@@ -352,6 +357,17 @@ sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335, upload-time = "2022-10-25T02:36:20.889Z" },
 ]
+
+[[package]]
+name = "core"
+version = "0.1.0"
+source = { editable = "libs/core" }
+dependencies = [
+    { name = "sqlalchemy" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "sqlalchemy", specifier = ">=2.1.6" }]
 
 [[package]]
 name = "cosmic-ray"
