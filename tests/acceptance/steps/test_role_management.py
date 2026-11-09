@@ -216,3 +216,8 @@ def test_managing_roles_requires_logging_in():
 @scenario("role-management.feature", "A role's permissions go only to the people who hold it")
 def test_a_roles_permissions_go_only_to_the_people_who_hold_it():
     pass
+
+
+@scenario("role-management.feature", "Removing a permission affects only that role and that permission")
+def test_removing_a_permission_affects_only_that_role_and_that_permission():
+    pass
