@@ -21,3 +21,7 @@ build-backend = "uv_build"
 [tool.uv.sources]
 accounts = { workspace = true }
 orchestrator-agent = { workspace = true }
+
+[tool.uv.build-backend]
+# Part of the one `sammy` namespace: no sammy/__init__.py anywhere.
+module-name = "sammy.bootstrap"

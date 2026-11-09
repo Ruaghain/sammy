@@ -5,7 +5,7 @@ import logging
 import time
 from logging.handlers import TimedRotatingFileHandler
 
-from bootstrap.config import Settings
+from sammy.bootstrap.config import Settings
 
 LOG_FILE = "sammy.log"
 

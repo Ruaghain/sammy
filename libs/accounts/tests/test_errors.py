@@ -1,7 +1,7 @@
 import inspect
 
-import accounts
-from accounts import AccountsError, errors
+import sammy.accounts as accounts
+from sammy.accounts import AccountsError, errors
 
 
 def test_every_refusal_from_accounts_is_an_accounts_error():

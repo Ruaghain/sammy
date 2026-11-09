@@ -1,6 +1,6 @@
 """Alembic environment for the accounts schema.
 
-Sammy runs these migrations itself at startup (accounts.migrate), passing in an open
+Sammy runs these migrations itself at startup (sammy.accounts.migrate), passing in an open
 connection. Run by hand (e.g. to create a new revision), it connects to
 SAMMY_DATABASE_URL instead.
 """
@@ -10,7 +10,7 @@ import os
 from alembic import context
 from sqlalchemy import create_engine
 
-from accounts.tables import VERSION_TABLE, metadata
+from sammy.accounts.tables import VERSION_TABLE, metadata
 
 
 def run_migrations(connection) -> None:

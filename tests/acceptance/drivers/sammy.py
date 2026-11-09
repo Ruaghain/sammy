@@ -10,7 +10,7 @@ import logging
 
 from sqlalchemy import MetaData, create_engine, func, select
 
-from accounts import (
+from sammy.accounts import (
     AdminRoleIsFixed,
     LastManagerRequired,
     LoginRefused,
@@ -25,7 +25,7 @@ from accounts import (
     UnknownRole,
     UsernameTaken,
 )
-from bootstrap import start
+from sammy.bootstrap import start
 
 
 class SammyDriver:

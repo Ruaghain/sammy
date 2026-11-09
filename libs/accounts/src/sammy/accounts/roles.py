@@ -9,7 +9,7 @@ changes with others.
 
 from sqlalchemy import Connection, delete, insert, select
 
-from accounts.tables import ADMIN_ROLE, role_permissions, roles, user_roles
+from sammy.accounts.tables import ADMIN_ROLE, role_permissions, roles, user_roles
 
 MANAGE_USERS = "manage users"
 MANAGE_ROLES = "manage roles"

@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-sammy = "cli:main"
+sammy = "sammy.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.13.1,<0.14.0"]
@@ -20,3 +20,7 @@ build-backend = "uv_build"
 
 [tool.uv.sources]
 bootstrap = { workspace = true }
+
+[tool.uv.build-backend]
+# Part of the one `sammy` namespace: no sammy/__init__.py anywhere.
+module-name = "sammy.cli"

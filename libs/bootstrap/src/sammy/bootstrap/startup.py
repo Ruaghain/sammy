@@ -8,8 +8,8 @@ acceptance driver) starts Sammy through start().
 
 from dataclasses import dataclass
 
-from accounts import AccountService, migrate
-from orchestrator_agent import Orchestrator
+from sammy.accounts import AccountService, migrate
+from sammy.agents.orchestrator import Orchestrator
 from sqlalchemy import Engine, create_engine
 
 

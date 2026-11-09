@@ -1,4 +1,4 @@
-from accounts import AccountService, LoginRequired, Session
+from sammy.accounts import AccountService, LoginRequired, Session
 
 __all__ = ["LoginRequired", "Orchestrator"]
 

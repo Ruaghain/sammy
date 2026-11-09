@@ -5,7 +5,7 @@ import sqlite3
 import pytest
 from argon2 import PasswordHasher
 
-from accounts import LoginRefused
+from sammy.accounts import LoginRefused
 
 
 def stored_password_hashes(database_path) -> dict[str, str]:

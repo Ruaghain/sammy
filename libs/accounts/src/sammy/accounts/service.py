@@ -4,9 +4,9 @@ import uuid
 from sqlalchemy import Engine
 from sqlalchemy.exc import IntegrityError
 
-from accounts.audit import record as _record
-from accounts.audit import record_about_nobody
-from accounts.errors import (
+from sammy.accounts.audit import record as _record
+from sammy.accounts.audit import record_about_nobody
+from sammy.accounts.errors import (
     AdminRoleIsFixed,
     LastManagerRequired,
     LoginRefused,
@@ -20,11 +20,11 @@ from accounts.errors import (
     UnknownRole,
     UsernameTaken,
 )
-from accounts.passwords import check_password, unknown_user_hash
-from accounts.roles import MANAGE_ROLES, MANAGE_USERS, RoleService, is_permission
-from accounts.sessions import Session, SessionService
-from accounts.tables import ADMIN_ROLE
-from accounts.users import UserService
+from sammy.accounts.passwords import check_password, unknown_user_hash
+from sammy.accounts.roles import MANAGE_ROLES, MANAGE_USERS, RoleService, is_permission
+from sammy.accounts.sessions import Session, SessionService
+from sammy.accounts.tables import ADMIN_ROLE
+from sammy.accounts.users import UserService
 
 
 class AccountService:
@@ -39,7 +39,7 @@ class AccountService:
     def __init__(self, engine: Engine):
         """`engine` is Sammy's database, created by whatever starts Sammy and
         shared with other packages. Its accounts tables must already be up to
-        date: run accounts.migrate(engine) first, at startup."""
+        date: run sammy.accounts.migrate(engine) first, at startup."""
         self._engine = engine
         self._sessions = SessionService()
         self._users = UserService()

@@ -2,7 +2,7 @@
 service.py. Run migrate(engine) at startup, before creating it. The modules
 alongside it each hold one concern."""
 
-from accounts.errors import (
+from sammy.accounts.errors import (
     AccountsError,
     AdminRoleIsFixed,
     LastManagerRequired,
@@ -17,9 +17,9 @@ from accounts.errors import (
     UnknownRole,
     UsernameTaken,
 )
-from accounts.schema import migrate
-from accounts.service import AccountService
-from accounts.sessions import Session
+from sammy.accounts.schema import migrate
+from sammy.accounts.service import AccountService
+from sammy.accounts.sessions import Session
 
 __all__ = [
     "AccountService",
