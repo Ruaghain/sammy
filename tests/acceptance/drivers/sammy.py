@@ -149,6 +149,11 @@ class SammyDriver:
     def permissions_of(self, role: str) -> set[str]:
         return self._accounts.permissions_of(role)
 
+    def role_allows_only(self, role: str, permissions: str) -> bool:
+        """Whether the role grants exactly what a phrase such as "managing
+        users" says: nothing missing and nothing extra."""
+        return self.permissions_of(role) == set(_permission_names_doing(permissions))
+
     def has_role(self, role: str, permissions: str) -> None:
         """Sets up a role directly, as a Given; creating a role as an admin
         goes through create_role()."""
