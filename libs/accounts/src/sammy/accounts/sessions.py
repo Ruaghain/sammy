@@ -10,7 +10,7 @@ from hashlib import sha256
 
 from sqlalchemy import Connection, Row, delete, insert, select
 
-from accounts.tables import sessions, users
+from sammy.accounts.tables import sessions, users
 
 
 @dataclass(frozen=True)

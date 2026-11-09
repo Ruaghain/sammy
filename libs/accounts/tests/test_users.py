@@ -5,9 +5,9 @@ from alembic.config import Config
 from argon2 import PasswordHasher
 from sqlalchemy import create_engine, text
 
-from accounts.schema import MIGRATIONS
-from accounts import Session
-from accounts.sessions import token_hash
+from sammy.accounts.schema import MIGRATIONS
+from sammy.accounts import Session
+from sammy.accounts.sessions import token_hash
 
 
 def database_url(tmp_path) -> str:

@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from bootstrap.config import ConfigurationError, load_settings
+from sammy.bootstrap.config import ConfigurationError, load_settings
 
 DATABASE = "sqlite:///sammy.sqlite"
 

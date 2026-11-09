@@ -8,8 +8,8 @@ import uuid
 
 from sqlalchemy import Connection, Row, false, insert, select, update
 
-from accounts.passwords import hash_password
-from accounts.tables import users
+from sammy.accounts.passwords import hash_password
+from sammy.accounts.tables import users
 
 
 class UserService:

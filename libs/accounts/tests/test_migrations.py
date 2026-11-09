@@ -2,7 +2,7 @@ from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 from sqlalchemy import create_engine
 
-from accounts.tables import VERSION_TABLE, metadata
+from sammy.accounts.tables import VERSION_TABLE, metadata
 
 
 def test_the_migrations_build_exactly_the_schema_the_code_queries(tmp_path, start_accounts):

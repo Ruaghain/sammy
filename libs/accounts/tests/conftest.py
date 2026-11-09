@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy import create_engine
 
-from accounts import AccountService, migrate
+from sammy.accounts import AccountService, migrate
 
 
 @pytest.fixture

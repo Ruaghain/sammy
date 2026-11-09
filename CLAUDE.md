@@ -15,26 +15,34 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   ATDD loop and is mutation tested. Create it with
   `uv init --package libs/accounts`, then add `libs` to `testpaths` in
   `pyproject.toml` and to `module-path` in `cosmic-ray.toml`.
-- `libs/bootstrap/` - the `bootstrap` package: how Sammy starts, whatever
-  starts it.
+- `libs/bootstrap/` - `sammy.bootstrap`: how Sammy starts, whatever starts it.
   Settings from the environment and `.env` (`config.py`), the log file
   (`logs.py`), and `start(database_url)` (`startup.py`): the one database
   engine, each package's migrations, then the services. Every entry point
   (the `sammy` command, the web backend later, the acceptance driver) starts
   Sammy through `start()`. It sits at the top of the dependency graph (it
-  imports `accounts`, the orchestrator and, later, every agent), so it is
+  imports `sammy.accounts`, the orchestrator and, later, every agent), so it is
   deliberately not in `libs/core`, which holds shared contracts at the bottom.
 - `apps/` - things you run, each a thin entry point over `libs/bootstrap`:
-  - `apps/cli/` - the `cli` package: only the `sammy` command, which parses
-    the command line and uses `bootstrap`.
+  - `apps/cli/` - `sammy.cli`: only the `sammy` command, which parses the
+    command line and uses `sammy.bootstrap`.
   - `apps/web/` - the web backend, when it's started (today's `web/`
     placeholder moves here).
-- Package names say what the package does (`accounts`, `bootstrap`, `cli`),
-  never "sammy": Sammy is the whole application.
-- A top-level folder must never have the same name as a package. pytest's
-  `importlib` import mode names test modules after their path, so a
-  top-level `cli/` folder registers a placeholder module `cli` that hides
-  the real `cli` package. Hence `apps/cli/`, not `cli/`.
+- Every package's code lives under one `sammy` namespace: `sammy.accounts`,
+  `sammy.bootstrap`, `sammy.cli`, `sammy.agents.<name>` (e.g.
+  `sammy.agents.orchestrator`), later `sammy.web`. Each workspace package
+  keeps its own folder and distribution name and puts its code in
+  `src/sammy/<name>/`, with `module-name = "sammy.<name>"` under
+  `[tool.uv.build-backend]`. There is **no `sammy/__init__.py` anywhere**:
+  `sammy` is an implicit namespace package spread across the workspace, and
+  adding one would hide every other package's part of it.
+- Below `sammy.`, a package is named for what it does, never "sammy" again.
+- No top-level folder may be called `sammy`. pytest's `importlib` import mode
+  names test modules after their path, so a top-level `sammy/` folder would
+  register a placeholder module `sammy` that hides the real namespace. (The
+  same clash is why the CLI lives in `apps/cli/`: with everything under
+  `sammy.`, folder names like `cli/` no longer clash, but `apps/` stays as
+  the home for things you run.)
 - `web/` - placeholder for the from-scratch web UI/server; it moves to
   `apps/web/` when work on it starts.
 - `tools/` - repo tooling (e.g. the feature-issue sync), unit tested under
@@ -63,7 +71,7 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   acceptance driver) creates the one SQLAlchemy engine and passes it to each
   package's top-level service; packages never connect by themselves.
 - Each package migrates only its own tables, with its own `migrate(engine)`
-  (e.g. `accounts.migrate`), run explicitly at startup before any of its
+  (e.g. `sammy.accounts.migrate`), run explicitly at startup before any of its
   services are created. Creating a service never changes the schema.
 - Each package keeps its own exceptions in `errors.py`, under one common base
   (e.g. `AccountsError`) so callers can handle them all at once.
@@ -111,9 +119,9 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   may be specific to one database.
 - The schema is created and changed only by Alembic migrations, which Sammy
   applies itself at startup through each package's `migrate(engine)` (see
-  Code structure). `accounts` keeps its migrations in
-  `libs/accounts/src/accounts/migrations/` and its tables in
-  `accounts/tables.py`; a change to one needs the other, and a unit test
+  Code structure). `sammy.accounts` keeps its migrations in
+  `libs/accounts/src/sammy/accounts/migrations/` and its tables in
+  `sammy/accounts/tables.py`; a change to one needs the other, and a unit test
   fails if they drift apart. Add a migration with
   `SAMMY_DATABASE_URL=sqlite:///scratch.sqlite uv run alembic -c libs/accounts/alembic.ini revision -m "<change>"`.
 - Each registered agent has a name and a description. The orchestrator gives
@@ -329,7 +337,7 @@ Every behavioural change goes through this loop, one scenario at a time:
     nothing, because Python 3.14 never evaluates annotations at runtime.
     `cr-filter-operators` skips these. The code rarely uses `|` for anything
     else; if it starts to, revisit this.
-  - `libs/*/src/*/tables.py`: table definitions only describe the schema for
+  - `libs/*/src/sammy/*/tables.py`: table definitions only describe the schema for
     building queries. The migrations create the schema, and a unit test
     keeps the two in step, so mutating them changes nothing at runtime.
 - A surviving mutant means the acceptance scenario has a gap, not that the
@@ -343,7 +351,7 @@ Every behavioural change goes through this loop, one scenario at a time:
   `agent/` as a periodic gate (nightly CI / pre-release), not per-PR —
   full-suite runs are too slow for the per-commit loop above.
 - Scope: cosmic-ray covers `agent/` and `libs/`, including
-  `libs/bootstrap/src/bootstrap/startup.py`, which the acceptance driver starts Sammy
+  `libs/bootstrap/src/sammy/bootstrap/startup.py`, which the acceptance driver starts Sammy
   through. Left out on purpose, because no scenario can see them, so every
   mutant would survive and say nothing; their unit tests cover them:
   - `apps/cli/`: no scenario drives Sammy through the `sammy` command yet.

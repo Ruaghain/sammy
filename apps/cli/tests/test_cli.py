@@ -3,7 +3,7 @@ import logging
 import pytest
 from sqlalchemy import create_engine, inspect
 
-from cli import main
+from sammy.cli import main
 
 
 @pytest.fixture
