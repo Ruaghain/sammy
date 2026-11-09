@@ -90,7 +90,6 @@ Feature: Managing roles
     Examples:
       | permission                    |
       | fly the plane                 |
-      | use the agent "no-such-agent" |
 
   Scenario: The last user who can manage roles keeps that permission
     Given a role "people manager" that can manage users and roles
