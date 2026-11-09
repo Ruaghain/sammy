@@ -211,3 +211,8 @@ def test_only_users_who_can_manage_roles_can_change_them():
 @scenario("role-management.feature", "Managing roles requires logging in")
 def test_managing_roles_requires_logging_in():
     pass
+
+
+@scenario("role-management.feature", "A role's permissions go only to the people who hold it")
+def test_a_roles_permissions_go_only_to_the_people_who_hold_it():
+    pass
