@@ -121,3 +121,8 @@ def i_am_told_i_dont_have_permission(sammy: SammyDriver):
 @then(parsers.parse('Sammy has recorded that "{username}" was refused permission to {permission}'))
 def sammy_has_recorded_a_refused_permission(sammy: SammyDriver, username: str, permission: str):
     assert sammy.has_recorded("permission refused", username, permission=permission)
+
+
+@given(parsers.parse('a role "{role}" that can {permissions}'))
+def a_role_that_can(sammy: SammyDriver, role: str, permissions: str):
+    sammy.has_role(role, permissions)
