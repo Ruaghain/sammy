@@ -392,6 +392,11 @@ Every behavioural change goes through this loop, one scenario at a time:
     file), and `libs/core`'s `database.py` (creating engines and migration
     connections), listed in `excluded-modules`. Scenarios see only the
     mistakes foreign keys catch, never the setting itself.
+  - Each package's `migrations/`, also in `excluded-modules`. Scenarios only
+    ever migrate an empty database to the latest version: they never upgrade
+    a database with data in it, downgrade, or look at older tables. The
+    migration unit tests cover those instead, so give them enough data that
+    a mistake shows (e.g. several users, each with a session).
   `web/` has no mutation coverage yet — out of scope until/unless a JS
   equivalent (Stryker) gets added.
 - New scenarios or `Examples` rows to kill survivors are still acceptance

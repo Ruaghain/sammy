@@ -8,6 +8,11 @@ excluded-modules = [
     # migrations create it, and a unit test pins the two together. Mutating
     # these changes nothing at runtime.
     "libs/*/src/sammy/*/tables.py",
+    # Migrations: scenarios only ever migrate an empty database to head, so
+    # they never upgrade data, downgrade, or see older tables, and nearly
+    # every mutant would survive. The migration unit tests cover them
+    # (libs/*/tests/test_migrations.py, test_users.py).
+    "libs/*/src/sammy/*/migrations/**",
     # Reading settings and setting up the log file: no scenario can see
     # either, so every mutant would survive. Unit tests cover them. (How
     # Sammy starts, sammy/bootstrap/startup.py, is mutated: the acceptance driver
