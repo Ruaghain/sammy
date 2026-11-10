@@ -92,7 +92,9 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
 
 - Configured through environment variables, never hardcoded:
   - `SAMMY_OLLAMA_URL` - address of the Ollama VM.
-  - `SAMMY_<AGENT>_MODEL` - model per agent (e.g. `SAMMY_ORCHESTRATOR_MODEL`).
+  - `SAMMY_<SHORT_NAME>_MODEL` - model per agent, named by the agent's short
+    name (see Stored data), e.g. `SAMMY_WEATHER_AGENT_MODEL`. The
+    orchestrator's is `SAMMY_ORCHESTRATOR_MODEL`.
 - Local by default. An agent uses a frontier model (e.g. Claude) only when
   its provider is explicitly set to it and `ANTHROPIC_API_KEY` is present.
 - A local `.env` file is supported for development and is gitignored.
@@ -136,10 +138,21 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   `sammy/accounts/tables.py`; a change to one needs the other, and a unit test
   fails if they drift apart. Add a migration with
   `SAMMY_DATABASE_URL=sqlite:///scratch.sqlite uv run alembic -c libs/accounts/alembic.ini revision -m "<change>"`.
-- Each registered agent has a name and a description. The orchestrator gives
-  its model the user's message and these descriptions and asks it to choose
-  the best agent, so routing has no hand-written rules. An agent's model stays
-  in the environment configuration above, not in the registry.
+- Each registered agent has three things:
+  - a **short name**: capital letters, digits and underscores, starting with
+    a letter (e.g. `WEATHER_AGENT`). Chosen when the agent is added, unique,
+    and never changed. Everything outside the registry refers to the agent by
+    it: permissions, its model setting and logs.
+  - a **name**, shown to people: unique and not blank. It can be changed,
+    since nothing refers to it.
+  - a **description**: not blank. It can be changed.
+- The orchestrator gives its model the user's message and the agents'
+  descriptions and asks it to choose the best agent, so routing has no
+  hand-written rules, and every agent needs a description. An agent's model
+  stays in the environment configuration above, not in the registry.
+- An agent can't be removed while any role allows using it: remove that
+  permission from those roles first. Otherwise a new agent added later with
+  the same short name would quietly be usable by them.
 - Each user has three identifiers:
   - `id` - auto-incrementing integer primary key, used only inside the
     database (foreign keys, joins). It never leaves the database: it can
@@ -158,8 +171,10 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   is always given on purpose.
 - Permissions: `manage users` (create, disable, give and remove roles),
   `manage roles` (create, change and delete roles), `view agents`,
-  `manage agents` (add agents, edit their descriptions) and
-  `use agent <name>` (talk to that agent).
+  `manage agents` (add, rename, describe and remove agents; includes
+  listing them, as `view agents` does) and `use agent <SHORT_NAME>` (talk to
+  that agent; one permission per agent, so access can differ by agent and so
+  by model).
 - The built-in `admin` role has every permission and can't be changed or
   deleted. A role that any user still holds can't be deleted.
 - At least one active user must always have `manage users` and
@@ -229,6 +244,11 @@ visible to anyone.
   mutant), goes through another spec PR by the human, then a new Scenario
   sub-issue. The agent never edits `.feature` files (a PreToolUse hook in
   `.claude/settings.json` blocks it).
+- Changing a scenario that's already bound is the one exception to "only
+  that file". Its new wording runs on `master` as soon as the spec PR merges,
+  so any step it uses that doesn't exist yet fails every test run. The agent
+  adds those step definitions (test code only, no change to how Sammy
+  behaves) to the spec branch before it merges, and the PR says so.
 - When asked to review a draft spec, give suggestions in the conversation:
   wording, missing or redundant scenarios, `Examples` rows, implementation
   detail leaking into the Gherkin, whether each scenario makes sense in
