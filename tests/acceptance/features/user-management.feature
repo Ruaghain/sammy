@@ -149,3 +149,14 @@ Feature: Managing users
     When I remove the "admin" role from "test.admin"
     Then I am told at least one user must be able to manage users and roles
     And "test.admin" has the "admin" role
+
+  Scenario: Removing a role leaves the user's other roles
+    Given I am logged in as the admin "test.admin"
+    And a role "early" that can manage roles
+    And a role "middle" that can manage users
+    And a role "late" that can view agents
+    And a user "test.user" with the "early" role
+    And "test.user" has been given the "middle" role
+    And "test.user" has been given the "late" role
+    When I remove the "middle" role from "test.user"
+    Then "test.user" has only the "early" and "late" roles
