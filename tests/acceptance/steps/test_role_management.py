@@ -241,3 +241,8 @@ def test_a_new_role_allows_exactly_what_it_was_created_with():
 @then(parsers.parse('the role "{role}" allows only {permissions}'))
 def the_role_allows_only(sammy: SammyDriver, role: str, permissions: str):
     assert sammy.role_allows_only(role, permissions)
+
+
+@scenario("role-management.feature", "Removing a permission leaves the role's other permissions")
+def test_removing_a_permission_leaves_the_roles_other_permissions():
+    pass
