@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from pytest_bdd import given, parsers, scenario, then, when
 
@@ -133,6 +135,12 @@ def has_the_role(sammy: SammyDriver, username: str, role: str):
     assert role in sammy.roles_of(username)
 
 
+@then(parsers.parse('"{username}" has only the {roles} roles'))
+def has_only_the_roles(sammy: SammyDriver, username: str, roles: str):
+    """From a list such as '"early" and "late"': exactly those, no more."""
+    assert sammy.roles_of(username) == set(re.findall(r'"([^"]+)"', roles))
+
+
 @then(parsers.parse('Sammy has recorded that setup created the admin "{username}"'))
 def sammy_has_recorded_that_setup_created_the_admin(sammy: SammyDriver, username: str):
     assert sammy.has_recorded("setup created admin", username)
@@ -238,3 +246,8 @@ def sammy_has_recorded_that_someone_disabled_a_user(sammy: SammyDriver, actor: s
 @then(parsers.parse('I am told "{username}" already has the "{role}" role'))
 def i_am_told_they_already_have_the_role(sammy: SammyDriver, username: str, role: str):
     assert sammy.role_was_already_held()
+
+
+@scenario("user-management.feature", "Removing a role leaves the user's other roles")
+def test_removing_a_role_leaves_the_users_other_roles():
+    pass

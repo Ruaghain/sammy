@@ -29,11 +29,6 @@ def test_a_users_permissions_come_from_all_of_their_roles():
     pass
 
 
-@given(parsers.parse('a role "{role}" that can {permissions}'))
-def a_role_that_can(sammy: SammyDriver, role: str, permissions: str):
-    sammy.has_role(role, permissions)
-
-
 @then(parsers.parse('"{username}" can create roles'))
 def can_create_roles(sammy: SammyDriver, username: str):
     assert sammy.can_create_roles(username)
