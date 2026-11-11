@@ -1,7 +1,7 @@
 [project]
 name = "core"
 version = "0.1.0"
-description = "What every Sammy package shares: creating the database engine."
+description = "What every Sammy package shares: creating the database engine and the audit log."
 authors = [
     { name = "Ruaghain", email = "ruaghain_dev@hotmail.com" }
 ]

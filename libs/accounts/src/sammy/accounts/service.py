@@ -4,8 +4,6 @@ import uuid
 from sqlalchemy import Engine
 from sqlalchemy.exc import IntegrityError
 
-from sammy.accounts.audit import record as _record
-from sammy.accounts.audit import record_about_nobody
 from sammy.accounts.errors import (
     AdminRoleIsFixed,
     LastManagerRequired,
@@ -25,6 +23,11 @@ from sammy.accounts.roles import MANAGE_ROLES, MANAGE_USERS, RoleService, is_per
 from sammy.accounts.sessions import Session, SessionService
 from sammy.accounts.tables import ADMIN_ROLE
 from sammy.accounts.users import UserService
+from sammy.core import AuditLog
+
+_audit = AuditLog("accounts")
+_record = _audit.record
+record_about_nobody = _audit.record_about_nobody
 
 
 class AccountService:
@@ -245,6 +248,15 @@ class AccountService:
         with self._engine.connect() as database:
             user = self._users.find(database, username)
             return self._roles.names_of(database, user.id) if user is not None else set()
+
+    def authorize(self, actor: Session | None, permission: str) -> uuid.UUID:
+        """For other packages: refuses, and records the refusal, unless
+        whoever holds `actor` is logged in and may do this. Returns their
+        public id, to record who did it."""
+        with self._engine.connect() as database:
+            acting = self._acting(database, actor)
+            self._require(database, acting, permission)
+        return acting.public_id
 
     def _require(self, database, acting, permission: str) -> None:
         """Refuses, and records the refusal, unless `acting` may do this."""

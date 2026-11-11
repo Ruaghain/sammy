@@ -5,6 +5,7 @@ members = [
     "apps/cli",
     "libs/bootstrap",
     "libs/core",
+    "libs/registry",
 ]
 
 [dependency-groups]

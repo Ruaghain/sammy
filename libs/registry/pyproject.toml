@@ -1,0 +1,27 @@
+[project]
+name = "registry"
+version = "0.1.0"
+description = "Sammy's agent registry: which agents exist, what they're called and what they do."
+readme = "README.md"
+authors = [
+    { name = "Ruaghain", email = "ruaghain_dev@hotmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "core",
+    "accounts",
+    "alembic>=1.20.1",
+    "sqlalchemy>=2.1.6",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+core = { workspace = true }
+accounts = { workspace = true }
+
+[tool.uv.build-backend]
+# Part of the one `sammy` namespace: no sammy/__init__.py anywhere.
+module-name = "sammy.registry"
