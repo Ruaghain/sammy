@@ -207,6 +207,12 @@ class SammyDriver:
         """Renames an agent as "me"."""
         self._attempt(lambda: self._registry.rename_agent_as(self._session, short_name, name))
 
+    def describe_agent(self, short_name: str, description: str) -> None:
+        """Changes an agent's description as "me"."""
+        self._attempt(
+            lambda: self._registry.describe_agent_as(self._session, short_name, description)
+        )
+
     def has_agent(self, short_name: str, name: str, description: str) -> None:
         """Sets up an agent directly, as a Given; adding one as an admin goes
         through add_agent()."""

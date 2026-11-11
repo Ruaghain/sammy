@@ -37,6 +37,11 @@ class AgentService:
     def rename(self, database: Connection, short_name: str, name: str) -> None:
         database.execute(update(agents).where(agents.c.short_name == short_name).values(name=name))
 
+    def describe(self, database: Connection, short_name: str, description: str) -> None:
+        database.execute(
+            update(agents).where(agents.c.short_name == short_name).values(description=description)
+        )
+
     def find(self, database: Connection, short_name: str) -> Agent | None:
         """The agent with this short name, or None if there's no such agent."""
         row = database.execute(

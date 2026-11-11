@@ -55,6 +55,13 @@ def test_a_short_name_is_capital_letters_digits_and_underscores():
             'the agent "HOMEWORK" is called "Homework helper" '
             'and described as "Helps with school homework"'
         ),
+    },    {
+        "action": 'describe the agent "HOMEWORK" as ""',
+        "missing": "description",
+        "unchanged": (
+            'the agent "HOMEWORK" is called "Homework helper" '
+            'and described as "Helps with school homework"'
+        ),
     },
 )
 @scenario("agent-registry.feature", "Every agent needs a name and a description")
@@ -85,6 +92,11 @@ def i_add_the_agent(sammy: SammyDriver, short_name: str, name: str, description:
 @when(parsers.re(r'I rename the agent "(?P<short_name>[^"]*)" to "(?P<name>[^"]*)"'))
 def i_rename_the_agent(sammy: SammyDriver, short_name: str, name: str):
     sammy.rename_agent(short_name, name)
+
+
+@when(parsers.re(r'I describe the agent "(?P<short_name>[^"]*)" as "(?P<description>[^"]*)"'))
+def i_describe_the_agent(sammy: SammyDriver, short_name: str, description: str):
+    sammy.describe_agent(short_name, description)
 
 
 @then(parsers.parse('the agent "{short_name}" is called "{name}" and described as "{description}"'))
