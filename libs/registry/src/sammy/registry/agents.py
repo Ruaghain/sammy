@@ -4,11 +4,21 @@ AgentService only works inside a connection it's given and never opens a
 transaction, so the caller can combine agent changes with others.
 """
 
+import re
 from dataclasses import dataclass
 
 from sqlalchemy import Connection, insert, select
 
 from sammy.registry.tables import agents
+
+# Capital letters, digits and underscores, starting with a letter, so it can
+# go into an environment variable name (SAMMY_<SHORT_NAME>_MODEL).
+_SHORT_NAME = re.compile(r"[A-Z][A-Z0-9_]*")
+
+
+def is_short_name(short_name: str) -> bool:
+    """Whether this can be an agent's short name."""
+    return _SHORT_NAME.fullmatch(short_name) is not None
 
 
 @dataclass(frozen=True)

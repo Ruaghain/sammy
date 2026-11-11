@@ -18,6 +18,12 @@ def test_an_agents_short_name_and_name_can_only_be_used_once():
     pass
 
 
+@pytest.mark.built_examples({"short name": "weather_agent"})
+@scenario("agent-registry.feature", "A short name is capital letters, digits and underscores")
+def test_a_short_name_is_capital_letters_digits_and_underscores():
+    pass
+
+
 @given(
     parsers.re(
         r'an agent "(?P<short_name>[^"]*)" called "(?P<name>[^"]*)", '
@@ -59,3 +65,13 @@ def i_am_told_the_agents_field_is_taken(sammy: SammyDriver, field: str):
 def the_agent_is_still_described_as(sammy: SammyDriver, short_name: str, description: str):
     agent = sammy.agent(short_name)
     assert agent is not None and agent[1] == description
+
+
+@then("I am told the short name isn't valid")
+def i_am_told_the_short_name_isnt_valid(sammy: SammyDriver):
+    assert sammy.short_name_was_invalid()
+
+
+@then("there are no agents")
+def there_are_no_agents(sammy: SammyDriver):
+    assert sammy.agent_count() == 0

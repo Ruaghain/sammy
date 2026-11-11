@@ -13,3 +13,8 @@ class AgentShortNameTaken(RegistryError):
 
 class AgentNameTaken(RegistryError):
     """Raised when adding an agent whose name another agent already has."""
+
+
+class InvalidShortName(RegistryError):
+    """Raised when adding an agent whose short name isn't capital letters,
+    digits and underscores, starting with a letter."""
