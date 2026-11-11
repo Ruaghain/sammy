@@ -26,7 +26,7 @@ from sammy.accounts import (
     UsernameTaken,
 )
 from sammy.bootstrap import start
-from sammy.registry import AgentShortNameTaken
+from sammy.registry import AgentNameTaken, AgentShortNameTaken
 
 
 class SammyDriver:
@@ -247,6 +247,8 @@ class SammyDriver:
             self._registry.add_agent_as(self._session, short_name, name, description)
         except AgentShortNameTaken:
             self._agent_field_taken = "short name"
+        except AgentNameTaken:
+            self._agent_field_taken = "name"
 
     def has_agent(self, short_name: str, name: str, description: str) -> None:
         """Sets up an agent directly, as a Given; adding one as an admin goes
