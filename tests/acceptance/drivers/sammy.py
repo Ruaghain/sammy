@@ -39,6 +39,7 @@ class SammyDriver:
         self._sammy = start(database_url)
         self._accounts = self._sammy.accounts
         self._orchestrator = self._sammy.orchestrator
+        self._registry = self._sammy.registry
         self._session: Session | None = None
         self._my_username: str | None = None
         self._login_refused = False
@@ -235,6 +236,15 @@ class SammyDriver:
         finally:
             if existing is None:
                 self._accounts.log_out(session)
+
+    def add_agent(self, short_name: str, name: str, description: str) -> None:
+        """Adds an agent to the registry as "me"."""
+        self._registry.add_agent_as(self._session, short_name, name, description)
+
+    def agent(self, short_name: str) -> tuple[str, str] | None:
+        """The agent's name and description, or None if there's no such agent."""
+        agent = self._registry.agent(short_name)
+        return (agent.name, agent.description) if agent is not None else None
 
     def log_in(self, username: str, password: str) -> None:
         try:

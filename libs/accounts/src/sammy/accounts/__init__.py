@@ -17,6 +17,7 @@ from sammy.accounts.errors import (
     UnknownRole,
     UsernameTaken,
 )
+from sammy.accounts.roles import MANAGE_AGENTS
 from sammy.accounts.schema import migrate
 from sammy.accounts.service import AccountService
 from sammy.accounts.sessions import Session
@@ -27,6 +28,7 @@ __all__ = [
     "AdminRoleIsFixed",
     "LastManagerRequired",
     "LoginRefused",
+    "MANAGE_AGENTS",
     "LoginRequired",
     "PermissionDenied",
     "RoleAlreadyHeld",

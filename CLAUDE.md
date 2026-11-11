@@ -11,7 +11,8 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
 - `libs/core/` - `sammy.core`: what every package shares, at the bottom of
   the dependency graph. Today that's `database.py`: `create_engine()`, the
   only way Sammy creates a database engine, and `migration_connection()`,
-  which every package's migrations run on (see Stored data). Later, shared
+  which every package's migrations run on (see Stored data), and `audit.py`:
+  `AuditLog`, which each package records its events through. Later, shared
   contracts (`Agent` protocol, `ModelClient` protocol, model clients). No
   business logic.
 - `libs/accounts/` - users and login. Not an agent, and it holds business
@@ -19,6 +20,10 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   ATDD loop and is mutation tested. Create it with
   `uv init --package libs/accounts`, then add `libs` to `testpaths` in
   `pyproject.toml` and to `module-path` in `cosmic-ray.toml`.
+- `libs/registry/` - `sammy.registry`: the agent registry (each agent's
+  short name, name and description). Business logic, so product code like
+  `libs/accounts`. It asks `sammy.accounts` who is acting and whether they're
+  allowed (`AccountService.authorize`); accounts never imports the registry.
 - `libs/bootstrap/` - `sammy.bootstrap`: how Sammy starts, whatever starts it.
   Settings from the environment and `.env` (`config.py`), the log file
   (`logs.py`), and `start(database_url)` (`startup.py`): the one database
@@ -33,7 +38,7 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   - `apps/web/` - the web backend, when it's started (today's `web/`
     placeholder moves here).
 - Every package's code lives under one `sammy` namespace: `sammy.accounts`,
-  `sammy.bootstrap`, `sammy.cli`, `sammy.agents.<name>` (e.g.
+  `sammy.bootstrap`, `sammy.registry`, `sammy.cli`, `sammy.agents.<name>` (e.g.
   `sammy.agents.orchestrator`), later `sammy.web`. Each workspace package
   keeps its own folder and distribution name and puts its code in
   `src/sammy/<name>/`, with `module-name = "sammy.<name>"` under
@@ -81,8 +86,8 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   Creating a service never changes the schema.
 - Each package keeps its own exceptions in `errors.py`, under one common base
   (e.g. `AccountsError`) so callers can handle them all at once.
-- A helper shared by more than one package (e.g. `audit`) moves to
-  `libs/core` once a second package needs it, not before.
+- A helper shared by more than one package moves to `libs/core` once a
+  second package needs it, not before (as `audit` did for the registry).
 - Unit test files are named after the module they cover (`test_users.py`,
   `test_passwords.py`, ...) and exist only for what acceptance scenarios can't
   see: storage formats, timing, migrations. There's no unit test file per
@@ -133,11 +138,13 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
   commits if `PRAGMA foreign_key_check` finds no row pointing at nothing.
 - The schema is created and changed only by Alembic migrations, which Sammy
   applies itself at startup through each package's `migrate(engine)` (see
-  Code structure). `sammy.accounts` keeps its migrations in
+  Code structure). Each package records its migrations in its own version
+  table (e.g. `registry_alembic_version`). `sammy.accounts` keeps its migrations in
   `libs/accounts/src/sammy/accounts/migrations/` and its tables in
   `sammy/accounts/tables.py`; a change to one needs the other, and a unit test
   fails if they drift apart. Add a migration with
   `SAMMY_DATABASE_URL=sqlite:///scratch.sqlite uv run alembic -c libs/accounts/alembic.ini revision -m "<change>"`.
+  `sammy.registry` works the same way, under `libs/registry/`.
 - Each registered agent has three things:
   - a **short name**: capital letters, digits and underscores, starting with
     a letter (e.g. `WEATHER_AGENT`). Chosen when the agent is added, unique,
@@ -322,7 +329,7 @@ Every behavioural change goes through this loop, one scenario at a time:
 
 ### Unit tests
 - Each agent's unit tests live in `agent/<name>/tests/`, and those for
-  `libs/accounts/` in `libs/accounts/tests/`. Add them inside-out
+  `libs/accounts/` and `libs/registry/` in their own `tests/`. Add them inside-out
   as the acceptance test exposes the need, not speculatively.
 - Unit tests are implementation detail: they can be rewritten or deleted
   during refactoring. The "never weaken" rule applies to `tests/acceptance/`

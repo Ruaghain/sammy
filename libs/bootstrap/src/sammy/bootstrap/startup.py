@@ -8,9 +8,11 @@ acceptance driver) starts Sammy through start().
 
 from dataclasses import dataclass
 
-from sammy.accounts import AccountService, migrate
+from sammy import accounts, registry
+from sammy.accounts import AccountService
 from sammy.agents.orchestrator import Orchestrator
 from sammy.core import create_engine
+from sammy.registry import RegistryService
 from sqlalchemy import Engine
 
 
@@ -19,6 +21,7 @@ class Sammy:
     engine: Engine
     accounts: AccountService
     orchestrator: Orchestrator
+    registry: RegistryService
 
     def close(self) -> None:
         self.engine.dispose()
@@ -26,6 +29,12 @@ class Sammy:
 
 def start(database_url: str) -> Sammy:
     engine = create_engine(database_url)
-    migrate(engine)
-    accounts = AccountService(engine)
-    return Sammy(engine=engine, accounts=accounts, orchestrator=Orchestrator(accounts))
+    accounts.migrate(engine)
+    registry.migrate(engine)
+    account_service = AccountService(engine)
+    return Sammy(
+        engine=engine,
+        accounts=account_service,
+        orchestrator=Orchestrator(account_service),
+        registry=RegistryService(engine, account_service),
+    )
