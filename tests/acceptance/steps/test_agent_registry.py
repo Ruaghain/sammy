@@ -69,6 +69,11 @@ def test_every_agent_needs_a_name_and_a_description():
     pass
 
 
+@scenario("agent-registry.feature", "An agent's description can be changed")
+def test_an_agents_description_can_be_changed():
+    pass
+
+
 @given(
     parsers.re(
         r'an agent "(?P<short_name>[^"]*)" called "(?P<name>[^"]*)", '
@@ -114,6 +119,23 @@ def sammy_has_recorded_that_the_agent_was_added(sammy: SammyDriver, actor: str, 
 @then(parsers.parse("I am told the agent's {field} is already taken"))
 def i_am_told_the_agents_field_is_taken(sammy: SammyDriver, field: str):
     assert sammy.agent_field_taken() == field
+
+
+@then(parsers.parse('the agent "{short_name}" is described as "{description}"'))
+def the_agent_is_described_as(sammy: SammyDriver, short_name: str, description: str):
+    agent = sammy.agent(short_name)
+    assert agent is not None and agent[1] == description
+
+
+@then(
+    parsers.parse(
+        'Sammy has recorded that "{actor}" changed the description of the agent "{short_name}"'
+    )
+)
+def sammy_has_recorded_that_the_description_was_changed(
+    sammy: SammyDriver, actor: str, short_name: str
+):
+    assert sammy.has_recorded("agent described", by=actor, agent=short_name)
 
 
 @then(parsers.parse('the agent "{short_name}" is still described as "{description}"'))
