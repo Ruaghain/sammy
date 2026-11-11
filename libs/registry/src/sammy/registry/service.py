@@ -1,8 +1,10 @@
 from sqlalchemy import Engine
+from sqlalchemy.exc import IntegrityError
 
 from sammy.accounts import MANAGE_AGENTS, AccountService, Session
 from sammy.core import AuditLog
 from sammy.registry.agents import Agent, AgentService
+from sammy.registry.errors import AgentShortNameTaken
 
 _audit = AuditLog("registry")
 
@@ -28,11 +30,22 @@ class RegistryService:
         self, actor: Session | None, short_name: str, name: str, description: str
     ) -> None:
         """Adds an agent on behalf of whoever holds `actor`, and records who
-        did it."""
+        did it. Refused if its short name is already in use."""
         acting = self._accounts.authorize(actor, MANAGE_AGENTS)
+        try:
+            with self._engine.begin() as database:
+                self._agents.add(database, short_name, name, description)
+        except IntegrityError:
+            # agents.short_name's unique constraint is the check, so two
+            # requests at once can't both add the same short name.
+            raise AgentShortNameTaken from None
+        _audit.record("agent added", actor_public_id=acting, agent=short_name)
+
+    def add_agent(self, short_name: str, name: str, description: str) -> None:
+        """Adds an agent directly, with no actor and no log entry: a building
+        block for setting up agents. Admins use add_agent_as."""
         with self._engine.begin() as database:
             self._agents.add(database, short_name, name, description)
-        _audit.record("agent added", actor_public_id=acting, agent=short_name)
 
     def agent(self, short_name: str) -> Agent | None:
         """The agent with this short name, or None if there's no such agent."""
