@@ -26,7 +26,7 @@ from sammy.accounts import (
     UsernameTaken,
 )
 from sammy.bootstrap import start
-from sammy.registry import AgentNameTaken, AgentShortNameTaken
+from sammy.registry import AgentNameTaken, AgentShortNameTaken, InvalidShortName
 
 
 class SammyDriver:
@@ -58,6 +58,7 @@ class SammyDriver:
         # Which of an agent's details was already taken, if adding it was
         # refused for that ("short name" or "name").
         self._agent_field_taken: str | None = None
+        self._short_name_invalid = False
         # Passwords of the users this driver created, so it can act as them.
         self._passwords: dict[str, str] = {}
         self._probes = 0
@@ -249,6 +250,8 @@ class SammyDriver:
             self._agent_field_taken = "short name"
         except AgentNameTaken:
             self._agent_field_taken = "name"
+        except InvalidShortName:
+            self._short_name_invalid = True
 
     def has_agent(self, short_name: str, name: str, description: str) -> None:
         """Sets up an agent directly, as a Given; adding one as an admin goes
@@ -257,6 +260,13 @@ class SammyDriver:
 
     def agent_field_taken(self) -> str | None:
         return self._agent_field_taken
+
+    def short_name_was_invalid(self) -> bool:
+        return self._short_name_invalid
+
+    def agent_count(self) -> int:
+        """How many agents Sammy's database holds."""
+        return self._row_count("agents")
 
     def agent(self, short_name: str) -> tuple[str, str] | None:
         """The agent's name and description, or None if there's no such agent."""
@@ -279,13 +289,18 @@ class SammyDriver:
 
     def user_count(self) -> int:
         """How many users Sammy's database holds."""
+        return self._row_count("users")
+
+    def _row_count(self, table: str) -> int:
+        """How many rows one of Sammy's tables holds, read straight from the
+        database rather than through Sammy."""
         engine = create_engine(self._database_url)
         try:
-            users = MetaData()
-            users.reflect(engine, only=["users"])
+            tables = MetaData()
+            tables.reflect(engine, only=[table])
             with engine.connect() as database:
                 return database.execute(
-                    select(func.count()).select_from(users.tables["users"])
+                    select(func.count()).select_from(tables.tables[table])
                 ).scalar_one()
         finally:
             engine.dispose()
