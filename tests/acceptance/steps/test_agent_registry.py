@@ -30,6 +30,18 @@ def test_a_short_name_is_capital_letters_digits_and_underscores():
     pass
 
 
+@pytest.mark.built_examples(
+    {
+        "action": 'add the agent "MEALS" called "", described as "Plans the week\'s meals"',
+        "missing": "name",
+        "unchanged": 'the agent "MEALS" doesn\'t exist',
+    },
+)
+@scenario("agent-registry.feature", "Every agent needs a name and a description")
+def test_every_agent_needs_a_name_and_a_description():
+    pass
+
+
 @given(
     parsers.re(
         r'an agent "(?P<short_name>[^"]*)" called "(?P<name>[^"]*)", '
@@ -81,3 +93,13 @@ def i_am_told_the_short_name_isnt_valid(sammy: SammyDriver):
 @then("there are no agents")
 def there_are_no_agents(sammy: SammyDriver):
     assert sammy.agent_count() == 0
+
+
+@then(parsers.parse("I am told the agent's {field} can't be blank"))
+def i_am_told_the_agents_field_cant_be_blank(sammy: SammyDriver, field: str):
+    assert sammy.agent_field_blank() == field
+
+
+@then(parsers.parse('the agent "{short_name}" doesn\'t exist'))
+def the_agent_doesnt_exist(sammy: SammyDriver, short_name: str):
+    assert sammy.agent(short_name) is None

@@ -18,3 +18,8 @@ class AgentNameTaken(RegistryError):
 class InvalidShortName(RegistryError):
     """Raised when adding an agent whose short name isn't capital letters,
     digits and underscores, starting with a letter."""
+
+
+class AgentNameBlank(RegistryError):
+    """Raised when an agent would be given a blank name: empty, or only
+    spaces."""

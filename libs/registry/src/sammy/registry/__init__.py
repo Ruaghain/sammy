@@ -3,8 +3,8 @@ RegistryService is the way in; see service.py. Run migrate(engine) at
 startup, before creating it."""
 
 from sammy.registry.agents import Agent
-from sammy.registry.errors import AgentNameTaken, AgentShortNameTaken, InvalidShortName, RegistryError
+from sammy.registry.errors import AgentNameBlank, AgentNameTaken, AgentShortNameTaken, InvalidShortName, RegistryError
 from sammy.registry.schema import migrate
 from sammy.registry.service import RegistryService
 
-__all__ = ["Agent", "AgentNameTaken", "AgentShortNameTaken", "InvalidShortName", "RegistryError", "RegistryService", "migrate"]
+__all__ = ["Agent", "AgentNameBlank", "AgentNameTaken", "AgentShortNameTaken", "InvalidShortName", "RegistryError", "RegistryService", "migrate"]
