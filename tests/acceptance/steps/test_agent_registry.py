@@ -18,7 +18,13 @@ def test_an_agents_short_name_and_name_can_only_be_used_once():
     pass
 
 
-@pytest.mark.built_examples({"short name": "weather_agent"})
+@pytest.mark.built_examples(
+    {"short name": "weather_agent"},
+    {"short name": "WEATHER AGENT"},
+    {"short name": "WEATHER-AGENT"},
+    {"short name": "1WEATHER"},
+    {"short name": ""},
+)
 @scenario("agent-registry.feature", "A short name is capital letters, digits and underscores")
 def test_a_short_name_is_capital_letters_digits_and_underscores():
     pass
