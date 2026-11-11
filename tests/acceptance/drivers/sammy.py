@@ -11,6 +11,7 @@ import logging
 from sqlalchemy import MetaData, create_engine, func, select
 
 from sammy.accounts import (
+    AccountsError,
     AdminRoleIsFixed,
     LastManagerRequired,
     LoginRefused,
@@ -31,7 +32,12 @@ from sammy.registry import (
     AgentNameTaken,
     AgentShortNameTaken,
     InvalidShortName,
+    RegistryError,
 )
+
+# Everything Sammy can refuse with. The driver notes each refusal for the
+# Then steps to ask about, rather than letting it fail the step.
+_REFUSALS = (AccountsError, RegistryError)
 
 
 class SammyDriver:
@@ -48,25 +54,12 @@ class SammyDriver:
         self._registry = self._sammy.registry
         self._session: Session | None = None
         self._my_username: str | None = None
-        self._login_refused = False
-        self._asked_to_log_in = False
-        self._setup_refused = False
-        self._username_taken = False
-        self._role_unknown = False
-        self._permission_denied = False
-        self._last_manager_protected = False
-        self._role_already_held = False
-        self._admin_role_protected = False
-        self._role_in_use = False
-        self._role_name_taken = False
-        self._permission_unknown = False
-        # Which of an agent's details was already taken, if adding it was
-        # refused for that ("short name" or "name").
-        self._agent_field_taken: str | None = None
-        self._short_name_invalid = False
-        # Which of an agent's details was refused for being blank, if any
-        # ("name" or "description").
-        self._agent_field_blank: str | None = None
+        # Every refusal Sammy gave "me" during the scenario, oldest first.
+        # Then steps ask whether a given kind of refusal happened.
+        self._refusals: list[Exception] = []
+        # The refusals a Then step has asked about. Any other refusal was
+        # unexpected, and fails the scenario when it ends (see close()).
+        self._expected: set[int] = set()
         # Passwords of the users this driver created, so it can act as them.
         self._passwords: dict[str, str] = {}
         self._probes = 0
@@ -80,85 +73,51 @@ class SammyDriver:
 
     def create_user(self, username: str, password: str) -> None:
         """Creates a user as "me", whoever I'm logged in as."""
-        try:
-            self._accounts.create_user_as(self._session, username, password)
-        except UsernameTaken:
-            self._username_taken = True
-            return
-        except PermissionDenied:
-            self._permission_denied = True
-            return
-        except LoginRequired:
-            self._asked_to_log_in = True
-            return
-        self._username_taken = False
-        self._passwords[username] = password
+        if self._attempt(lambda: self._accounts.create_user_as(self._session, username, password)):
+            self._passwords[username] = password
 
     def username_was_taken(self) -> bool:
-        return self._username_taken
+        return self._was_refused(UsernameTaken)
 
     def permission_was_denied(self) -> bool:
-        return self._permission_denied
+        return self._was_refused(PermissionDenied)
 
     def user_exists(self, username: str) -> bool:
         return self._accounts.public_id(username) is not None
 
     def give_role(self, username: str, role: str) -> None:
         """Gives a user a role as "me"."""
-        try:
-            self._accounts.give_role_as(self._session, username, role)
-            self._role_unknown = False
-        except UnknownRole:
-            self._role_unknown = True
-        except RoleAlreadyHeld:
-            self._role_already_held = True
-        except PermissionDenied:
-            self._permission_denied = True
+        self._attempt(lambda: self._accounts.give_role_as(self._session, username, role))
 
     def disable(self, username: str) -> None:
         """Disables a user as "me"."""
-        try:
-            self._accounts.disable_as(self._session, username)
-        except PermissionDenied:
-            self._permission_denied = True
-        except LastManagerRequired:
-            self._last_manager_protected = True
+        self._attempt(lambda: self._accounts.disable_as(self._session, username))
 
     def remove_role(self, username: str, role: str) -> None:
         """Removes a role from a user as "me"."""
-        try:
-            self._accounts.remove_role_as(self._session, username, role)
-        except LastManagerRequired:
-            self._last_manager_protected = True
+        self._attempt(lambda: self._accounts.remove_role_as(self._session, username, role))
 
     def last_manager_was_protected(self) -> bool:
-        return self._last_manager_protected
+        return self._was_refused(LastManagerRequired)
 
     def role_was_already_held(self) -> bool:
-        return self._role_already_held
+        return self._was_refused(RoleAlreadyHeld)
 
     def role_was_unknown(self) -> bool:
-        return self._role_unknown
+        return self._was_refused(UnknownRole)
 
     def create_role(self, role: str, permissions: str) -> None:
         """Creates a role as "me", from a phrase such as "manage users" or
         "manage users and roles"."""
-        try:
-            self._accounts.create_role_as(self._session, role, _permission_names(permissions))
-        except RoleNameTaken:
-            self._role_name_taken = True
-        except UnknownPermission:
-            self._permission_unknown = True
-        except PermissionDenied:
-            self._permission_denied = True
-        except LoginRequired:
-            self._asked_to_log_in = True
+        self._attempt(
+            lambda: self._accounts.create_role_as(self._session, role, _permission_names(permissions))
+        )
 
     def permission_was_unknown(self) -> bool:
-        return self._permission_unknown
+        return self._was_refused(UnknownPermission)
 
     def role_name_was_taken(self) -> bool:
-        return self._role_name_taken
+        return self._was_refused(RoleNameTaken)
 
     def permissions_of(self, role: str) -> set[str]:
         return self._accounts.permissions_of(role)
@@ -175,40 +134,27 @@ class SammyDriver:
 
     def grant(self, role: str, permissions: str) -> None:
         """Lets a role do more, as "me", from a phrase such as "manage users"."""
-        try:
-            self._accounts.grant_as(self._session, role, _permission_names(permissions))
-        except PermissionDenied:
-            self._permission_denied = True
+        self._attempt(lambda: self._accounts.grant_as(self._session, role, _permission_names(permissions)))
 
     def revoke(self, role: str, permissions: str) -> None:
         """Stops a role doing something, as "me", from a phrase such as
         "managing users"."""
-        try:
-            self._accounts.revoke_as(self._session, role, _permission_names_doing(permissions))
-        except AdminRoleIsFixed:
-            self._admin_role_protected = True
-        except LastManagerRequired:
-            self._last_manager_protected = True
+        self._attempt(
+            lambda: self._accounts.revoke_as(self._session, role, _permission_names_doing(permissions))
+        )
 
     def delete_role(self, role: str) -> None:
         """Deletes a role as "me"."""
-        try:
-            self._accounts.delete_role_as(self._session, role)
-        except AdminRoleIsFixed:
-            self._admin_role_protected = True
-        except RoleInUse:
-            self._role_in_use = True
-        except PermissionDenied:
-            self._permission_denied = True
+        self._attempt(lambda: self._accounts.delete_role_as(self._session, role))
 
     def role_was_in_use(self) -> bool:
-        return self._role_in_use
+        return self._was_refused(RoleInUse)
 
     def role_exists(self, role: str) -> bool:
         return self._accounts.role_exists(role)
 
     def admin_role_was_protected(self) -> bool:
-        return self._admin_role_protected
+        return self._was_refused(AdminRoleIsFixed)
 
     def has_recorded_for_each(
         self, permissions: str, event: str, phrased_as: str = "do", **fields
@@ -252,16 +198,9 @@ class SammyDriver:
 
     def add_agent(self, short_name: str, name: str, description: str) -> None:
         """Adds an agent to the registry as "me"."""
-        try:
-            self._registry.add_agent_as(self._session, short_name, name, description)
-        except AgentShortNameTaken:
-            self._agent_field_taken = "short name"
-        except AgentNameTaken:
-            self._agent_field_taken = "name"
-        except InvalidShortName:
-            self._short_name_invalid = True
-        except AgentNameBlank:
-            self._agent_field_blank = "name"
+        self._attempt(
+            lambda: self._registry.add_agent_as(self._session, short_name, name, description)
+        )
 
     def has_agent(self, short_name: str, name: str, description: str) -> None:
         """Sets up an agent directly, as a Given; adding one as an admin goes
@@ -269,13 +208,16 @@ class SammyDriver:
         self._registry.add_agent(short_name, name, description)
 
     def agent_field_taken(self) -> str | None:
-        return self._agent_field_taken
+        """Which of an agent's details I was told is already taken, if any:
+        "short name" or "name"."""
+        return self._field_refused({AgentShortNameTaken: "short name", AgentNameTaken: "name"})
 
     def agent_field_blank(self) -> str | None:
-        return self._agent_field_blank
+        """Which of an agent's details I was told can't be blank, if any."""
+        return self._field_refused({AgentNameBlank: "name"})
 
     def short_name_was_invalid(self) -> bool:
-        return self._short_name_invalid
+        return self._was_refused(InvalidShortName)
 
     def agent_count(self) -> int:
         """How many agents Sammy's database holds."""
@@ -287,13 +229,13 @@ class SammyDriver:
         return (agent.name, agent.description) if agent is not None else None
 
     def log_in(self, username: str, password: str) -> None:
-        try:
+        self._session = None
+
+        def log_in():
             self._session = self._accounts.log_in(username, password)
             self._my_username = username
-            self._login_refused = False
-        except LoginRefused:
-            self._session = None
-            self._login_refused = True
+
+        self._attempt(log_in)
 
     def log_out(self) -> None:
         # The session is deliberately kept, like a stale cookie or a copied
@@ -329,15 +271,11 @@ class SammyDriver:
         self._accounts.give_role(username, role)
 
     def run_setup(self, username: str, password: str) -> None:
-        try:
-            self._accounts.set_up(username, password)
+        if self._attempt(lambda: self._accounts.set_up(username, password)):
             self._passwords[username] = password
-            self._setup_refused = False
-        except SetupAlreadyDone:
-            self._setup_refused = True
 
     def setup_was_refused(self) -> bool:
-        return self._setup_refused
+        return self._was_refused(SetupAlreadyDone)
 
     def can_log_in(self, username: str, password: str) -> bool:
         """Tries the login on the side, without changing who "I" am logged in
@@ -371,11 +309,7 @@ class SammyDriver:
         self._session = None
 
     def send_message(self, message: str) -> None:
-        try:
-            self._orchestrator.handle(self._session, message)
-            self._asked_to_log_in = False
-        except LoginRequired:
-            self._asked_to_log_in = True
+        self._attempt(lambda: self._orchestrator.handle(self._session, message))
 
     def my_session_token(self) -> str:
         """The secret token of the current login, as a front end would hold it."""
@@ -431,6 +365,18 @@ class SammyDriver:
         """Every log line Sammy has written, without the database."""
         return "\n".join(self._log.lines())
 
+    def unexpected_refusals(self) -> list[Exception]:
+        """Refusals no Then step asked about: Sammy refused something the
+        scenario expected to work."""
+        # A refused login is an outcome login scenarios set up on purpose, and
+        # check through who is logged in and what Sammy recorded, so it never
+        # counts as unexpected.
+        return [
+            refusal
+            for refusal in self._refusals
+            if id(refusal) not in self._expected and not isinstance(refusal, LoginRefused)
+        ]
+
     def close(self) -> None:
         self._log.stop()
         self._sammy.close()
@@ -439,10 +385,36 @@ class SammyDriver:
         return self._accounts.user_for(self._session) if self._session else None
 
     def login_was_refused(self) -> bool:
-        return self._login_refused
+        return self._was_refused(LoginRefused)
 
     def was_asked_to_log_in(self) -> bool:
-        return self._asked_to_log_in
+        return self._was_refused(LoginRequired)
+
+    def _attempt(self, action) -> bool:
+        """Does something as "me". If Sammy refuses, notes the refusal for the
+        Then steps instead of failing the step. Whether it was done."""
+        try:
+            action()
+        except _REFUSALS as refusal:
+            self._refusals.append(refusal)
+            return False
+        return True
+
+    def _was_refused(self, kind: type[Exception]) -> bool:
+        """Whether Sammy refused me with this kind of refusal at any point in
+        the scenario."""
+        matching = [refusal for refusal in self._refusals if isinstance(refusal, kind)]
+        self._expected.update(map(id, matching))
+        return bool(matching)
+
+    def _field_refused(self, fields: dict[type[Exception], str]) -> str | None:
+        """Which field the most recent of these refusals was about, if any."""
+        for refusal in reversed(self._refusals):
+            for kind, field in fields.items():
+                if isinstance(refusal, kind):
+                    self._expected.add(id(refusal))
+                    return field
+        return None
 
 
 class _LogRecorder(logging.Handler):
