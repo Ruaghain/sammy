@@ -5,6 +5,7 @@ from sammy.accounts import MANAGE_AGENTS, AccountService, Session
 from sammy.core import AuditLog
 from sammy.registry.agents import Agent, AgentService, is_short_name
 from sammy.registry.errors import (
+    AgentDescriptionBlank,
     AgentNameBlank,
     AgentNameTaken,
     AgentShortNameTaken,
@@ -35,13 +36,15 @@ class RegistryService:
         self, actor: Session | None, short_name: str, name: str, description: str
     ) -> None:
         """Adds an agent on behalf of whoever holds `actor`, and records who
-        did it. Refused if its short name isn't valid, its name is blank, or
-        its short name or name is already in use."""
+        did it. Refused if its short name isn't valid, its name or
+        description is blank, or its short name or name is already in use."""
         acting = self._accounts.authorize(actor, MANAGE_AGENTS)
         if not is_short_name(short_name):
             raise InvalidShortName
         if not name.strip():
             raise AgentNameBlank
+        if not description.strip():
+            raise AgentDescriptionBlank
         try:
             with self._engine.begin() as database:
                 self._agents.add(database, short_name, name, description)
