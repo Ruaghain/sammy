@@ -23,3 +23,8 @@ class InvalidShortName(RegistryError):
 class AgentNameBlank(RegistryError):
     """Raised when an agent would be given a blank name: empty, or only
     spaces."""
+
+
+class AgentDescriptionBlank(RegistryError):
+    """Raised when an agent would be given a blank description: empty, or
+    only spaces. The orchestrator chooses agents by their descriptions."""
