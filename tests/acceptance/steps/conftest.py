@@ -126,3 +126,8 @@ def sammy_has_recorded_a_refused_permission(sammy: SammyDriver, username: str, p
 @given(parsers.parse('a role "{role}" that can {permissions}'))
 def a_role_that_can(sammy: SammyDriver, role: str, permissions: str):
     sammy.has_role(role, permissions)
+
+
+@then(parsers.parse('the role "{role}" allows only {permissions}'))
+def the_role_allows_only(sammy: SammyDriver, role: str, permissions: str):
+    assert sammy.role_allows_only(role, permissions)
