@@ -61,12 +61,16 @@ class RegistryService:
         """Renames an agent on behalf of whoever holds `actor`, and records who
         did it. Its short name never changes, so nothing that refers to the
         agent (e.g. a role's "use agent <SHORT_NAME>") is affected. Refused if
-        the new name is blank."""
+        the new name is blank or another agent already has it."""
         acting = self._accounts.authorize(actor, MANAGE_AGENTS)
         if not name.strip():
             raise AgentNameBlank
-        with self._engine.begin() as database:
-            self._agents.rename(database, short_name, name)
+        try:
+            with self._engine.begin() as database:
+                self._agents.rename(database, short_name, name)
+        except IntegrityError:
+            # agents.name's unique constraint is the check, as when adding.
+            raise AgentNameTaken from None
         _audit.record("agent renamed", actor_public_id=acting, agent=short_name)
 
     def describe_agent_as(self, actor: Session | None, short_name: str, description: str) -> None:

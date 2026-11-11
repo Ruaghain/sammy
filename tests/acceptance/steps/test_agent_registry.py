@@ -79,6 +79,11 @@ def test_an_agent_can_be_renamed_keeping_its_short_name():
     pass
 
 
+@scenario("agent-registry.feature", "An agent can't be renamed to a name another agent has")
+def test_an_agent_cant_be_renamed_to_a_name_another_agent_has():
+    pass
+
+
 @given(
     parsers.re(
         r'an agent "(?P<short_name>[^"]*)" called "(?P<name>[^"]*)", '
