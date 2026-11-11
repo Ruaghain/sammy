@@ -74,6 +74,11 @@ def test_an_agents_description_can_be_changed():
     pass
 
 
+@scenario("agent-registry.feature", "An agent can be renamed, keeping its short name")
+def test_an_agent_can_be_renamed_keeping_its_short_name():
+    pass
+
+
 @given(
     parsers.re(
         r'an agent "(?P<short_name>[^"]*)" called "(?P<name>[^"]*)", '
@@ -136,6 +141,11 @@ def sammy_has_recorded_that_the_description_was_changed(
     sammy: SammyDriver, actor: str, short_name: str
 ):
     assert sammy.has_recorded("agent described", by=actor, agent=short_name)
+
+
+@then(parsers.parse('Sammy has recorded that "{actor}" renamed the agent "{short_name}"'))
+def sammy_has_recorded_that_the_agent_was_renamed(sammy: SammyDriver, actor: str, short_name: str):
+    assert sammy.has_recorded("agent renamed", by=actor, agent=short_name)
 
 
 @then(parsers.parse('the agent "{short_name}" is still described as "{description}"'))
