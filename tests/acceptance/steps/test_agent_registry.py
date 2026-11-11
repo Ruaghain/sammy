@@ -36,6 +36,11 @@ def test_a_short_name_is_capital_letters_digits_and_underscores():
         "missing": "name",
         "unchanged": 'the agent "MEALS" doesn\'t exist',
     },
+    {
+        "action": 'add the agent "MEALS" called "   ", described as "Plans the week\'s meals"',
+        "missing": "name",
+        "unchanged": 'the agent "MEALS" doesn\'t exist',
+    },
 )
 @scenario("agent-registry.feature", "Every agent needs a name and a description")
 def test_every_agent_needs_a_name_and_a_description():
