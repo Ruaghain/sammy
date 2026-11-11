@@ -36,5 +36,10 @@ def sammy(tmp_path):
         driver = SammyDriver(database_url)
         try:
             yield driver
+            # Checked only if every step passed: a refusal no Then step asked
+            # about means Sammy refused something the scenario expected to
+            # work.
+            unexpected = driver.unexpected_refusals()
+            assert not unexpected, f"Sammy refused unexpectedly: {unexpected!r}"
         finally:
             driver.close()
