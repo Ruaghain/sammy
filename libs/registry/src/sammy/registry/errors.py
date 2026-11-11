@@ -9,3 +9,7 @@ class RegistryError(Exception):
 
 class AgentShortNameTaken(RegistryError):
     """Raised when adding an agent whose short name is already in use."""
+
+
+class AgentNameTaken(RegistryError):
+    """Raised when adding an agent whose name another agent already has."""

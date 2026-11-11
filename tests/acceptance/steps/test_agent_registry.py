@@ -11,6 +11,7 @@ def test_an_agent_can_be_added():
 
 @pytest.mark.built_examples(
     {"short name": "HOMEWORK", "name": "Meal planner", "taken": "short name"},
+    {"short name": "MEALS", "name": "Homework helper", "taken": "name"},
 )
 @scenario("agent-registry.feature", "An agent's short name and name can only be used once")
 def test_an_agents_short_name_and_name_can_only_be_used_once():
