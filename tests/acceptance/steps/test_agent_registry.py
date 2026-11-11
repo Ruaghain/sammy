@@ -44,6 +44,10 @@ def test_a_short_name_is_capital_letters_digits_and_underscores():
         "action": 'add the agent "MEALS" called "Meal planner", described as ""',
         "missing": "description",
         "unchanged": 'the agent "MEALS" doesn\'t exist',
+    },    {
+        "action": 'add the agent "MEALS" called "Meal planner", described as "   "',
+        "missing": "description",
+        "unchanged": 'the agent "MEALS" doesn\'t exist',
     },
 )
 @scenario("agent-registry.feature", "Every agent needs a name and a description")
