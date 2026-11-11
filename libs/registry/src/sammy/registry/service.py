@@ -57,6 +57,15 @@ class RegistryService:
             raise AgentNameTaken from None
         _audit.record("agent added", actor_public_id=acting, agent=short_name)
 
+    def rename_agent_as(self, actor: Session | None, short_name: str, name: str) -> None:
+        """Renames an agent on behalf of whoever holds `actor`. Its short name
+        never changes. Refused if the new name is blank."""
+        self._accounts.authorize(actor, MANAGE_AGENTS)
+        if not name.strip():
+            raise AgentNameBlank
+        with self._engine.begin() as database:
+            self._agents.rename(database, short_name, name)
+
     def add_agent(self, short_name: str, name: str, description: str) -> None:
         """Adds an agent directly, with no actor and no log entry: a building
         block for setting up agents. Admins use add_agent_as."""
