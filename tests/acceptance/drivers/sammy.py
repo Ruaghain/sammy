@@ -26,6 +26,7 @@ from sammy.accounts import (
     UsernameTaken,
 )
 from sammy.bootstrap import start
+from sammy.registry import AgentShortNameTaken
 
 
 class SammyDriver:
@@ -54,6 +55,9 @@ class SammyDriver:
         self._role_in_use = False
         self._role_name_taken = False
         self._permission_unknown = False
+        # Which of an agent's details was already taken, if adding it was
+        # refused for that ("short name" or "name").
+        self._agent_field_taken: str | None = None
         # Passwords of the users this driver created, so it can act as them.
         self._passwords: dict[str, str] = {}
         self._probes = 0
@@ -239,7 +243,18 @@ class SammyDriver:
 
     def add_agent(self, short_name: str, name: str, description: str) -> None:
         """Adds an agent to the registry as "me"."""
-        self._registry.add_agent_as(self._session, short_name, name, description)
+        try:
+            self._registry.add_agent_as(self._session, short_name, name, description)
+        except AgentShortNameTaken:
+            self._agent_field_taken = "short name"
+
+    def has_agent(self, short_name: str, name: str, description: str) -> None:
+        """Sets up an agent directly, as a Given; adding one as an admin goes
+        through add_agent()."""
+        self._registry.add_agent(short_name, name, description)
+
+    def agent_field_taken(self) -> str | None:
+        return self._agent_field_taken
 
     def agent(self, short_name: str) -> tuple[str, str] | None:
         """The agent's name and description, or None if there's no such agent."""
