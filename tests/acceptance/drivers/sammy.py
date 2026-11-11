@@ -26,7 +26,12 @@ from sammy.accounts import (
     UsernameTaken,
 )
 from sammy.bootstrap import start
-from sammy.registry import AgentNameTaken, AgentShortNameTaken, InvalidShortName
+from sammy.registry import (
+    AgentNameBlank,
+    AgentNameTaken,
+    AgentShortNameTaken,
+    InvalidShortName,
+)
 
 
 class SammyDriver:
@@ -59,6 +64,9 @@ class SammyDriver:
         # refused for that ("short name" or "name").
         self._agent_field_taken: str | None = None
         self._short_name_invalid = False
+        # Which of an agent's details was refused for being blank, if any
+        # ("name" or "description").
+        self._agent_field_blank: str | None = None
         # Passwords of the users this driver created, so it can act as them.
         self._passwords: dict[str, str] = {}
         self._probes = 0
@@ -252,6 +260,8 @@ class SammyDriver:
             self._agent_field_taken = "name"
         except InvalidShortName:
             self._short_name_invalid = True
+        except AgentNameBlank:
+            self._agent_field_blank = "name"
 
     def has_agent(self, short_name: str, name: str, description: str) -> None:
         """Sets up an agent directly, as a Given; adding one as an admin goes
@@ -260,6 +270,9 @@ class SammyDriver:
 
     def agent_field_taken(self) -> str | None:
         return self._agent_field_taken
+
+    def agent_field_blank(self) -> str | None:
+        return self._agent_field_blank
 
     def short_name_was_invalid(self) -> bool:
         return self._short_name_invalid
