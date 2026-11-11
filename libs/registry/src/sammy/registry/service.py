@@ -66,6 +66,15 @@ class RegistryService:
         with self._engine.begin() as database:
             self._agents.rename(database, short_name, name)
 
+    def describe_agent_as(self, actor: Session | None, short_name: str, description: str) -> None:
+        """Changes an agent's description on behalf of whoever holds `actor`.
+        Refused if the new description is blank."""
+        self._accounts.authorize(actor, MANAGE_AGENTS)
+        if not description.strip():
+            raise AgentDescriptionBlank
+        with self._engine.begin() as database:
+            self._agents.describe(database, short_name, description)
+
     def add_agent(self, short_name: str, name: str, description: str) -> None:
         """Adds an agent directly, with no actor and no log entry: a building
         block for setting up agents. Admins use add_agent_as."""
