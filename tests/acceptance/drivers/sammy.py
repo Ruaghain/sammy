@@ -213,6 +213,10 @@ class SammyDriver:
             lambda: self._registry.describe_agent_as(self._session, short_name, description)
         )
 
+    def remove_agent(self, short_name: str) -> None:
+        """Removes an agent as "me"."""
+        self._attempt(lambda: self._registry.remove_agent_as(self._session, short_name))
+
     def has_agent(self, short_name: str, name: str, description: str) -> None:
         """Sets up an agent directly, as a Given; adding one as an admin goes
         through add_agent()."""

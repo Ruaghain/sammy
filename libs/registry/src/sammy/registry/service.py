@@ -83,6 +83,14 @@ class RegistryService:
             self._agents.describe(database, short_name, description)
         _audit.record("agent described", actor_public_id=acting, agent=short_name)
 
+    def remove_agent_as(self, actor: Session | None, short_name: str) -> None:
+        """Removes an agent on behalf of whoever holds `actor`, and records
+        who did it."""
+        acting = self._accounts.authorize(actor, MANAGE_AGENTS)
+        with self._engine.begin() as database:
+            self._agents.remove(database, short_name)
+        _audit.record("agent removed", actor_public_id=acting, agent=short_name)
+
     def add_agent(self, short_name: str, name: str, description: str) -> None:
         """Adds an agent directly, with no actor and no log entry: a building
         block for setting up agents. Admins use add_agent_as."""
