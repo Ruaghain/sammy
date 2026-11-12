@@ -94,6 +94,11 @@ def test_a_role_cant_be_allowed_to_use_an_agent_that_doesnt_exist():
     pass
 
 
+@scenario("agent-registry.feature", "An agent can be removed")
+def test_an_agent_can_be_removed():
+    pass
+
+
 @given(
     parsers.re(
         r'an agent "(?P<short_name>[^"]*)" called "(?P<name>[^"]*)", '
@@ -122,6 +127,16 @@ def i_rename_the_agent(sammy: SammyDriver, short_name: str, name: str):
 @when(parsers.re(r'I describe the agent "(?P<short_name>[^"]*)" as "(?P<description>[^"]*)"'))
 def i_describe_the_agent(sammy: SammyDriver, short_name: str, description: str):
     sammy.describe_agent(short_name, description)
+
+
+@when(parsers.parse('I remove the agent "{short_name}"'))
+def i_remove_the_agent(sammy: SammyDriver, short_name: str):
+    sammy.remove_agent(short_name)
+
+
+@then(parsers.parse('Sammy has recorded that "{actor}" removed the agent "{short_name}"'))
+def sammy_has_recorded_that_the_agent_was_removed(sammy: SammyDriver, actor: str, short_name: str):
+    assert sammy.has_recorded("agent removed", by=actor, agent=short_name)
 
 
 @then(parsers.parse('the agent "{short_name}" is called "{name}" and described as "{description}"'))

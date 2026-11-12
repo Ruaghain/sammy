@@ -7,7 +7,7 @@ transaction, so the caller can combine agent changes with others.
 import re
 from dataclasses import dataclass
 
-from sqlalchemy import Connection, insert, select, update
+from sqlalchemy import Connection, delete, insert, select, update
 
 from sammy.registry.tables import agents
 
@@ -41,6 +41,9 @@ class AgentService:
         database.execute(
             update(agents).where(agents.c.short_name == short_name).values(description=description)
         )
+
+    def remove(self, database: Connection, short_name: str) -> None:
+        database.execute(delete(agents).where(agents.c.short_name == short_name))
 
     def find(self, database: Connection, short_name: str) -> Agent | None:
         """The agent with this short name, or None if there's no such agent."""
