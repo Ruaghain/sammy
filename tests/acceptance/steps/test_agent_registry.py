@@ -89,6 +89,11 @@ def test_a_role_can_be_allowed_to_use_an_agent_that_exists():
     pass
 
 
+@scenario("agent-registry.feature", "A role can't be allowed to use an agent that doesn't exist")
+def test_a_role_cant_be_allowed_to_use_an_agent_that_doesnt_exist():
+    pass
+
+
 @given(
     parsers.re(
         r'an agent "(?P<short_name>[^"]*)" called "(?P<name>[^"]*)", '

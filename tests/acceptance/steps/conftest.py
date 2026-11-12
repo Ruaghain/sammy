@@ -136,3 +136,13 @@ def the_role_allows_only(sammy: SammyDriver, role: str, permissions: str):
 @when(parsers.parse('I create the role "{role}" that can {permissions}'))
 def i_create_the_role(sammy: SammyDriver, role: str, permissions: str):
     sammy.create_role(role, permissions)
+
+
+@then(parsers.parse('the role "{role}" doesn\'t exist'))
+def the_role_doesnt_exist(sammy: SammyDriver, role: str):
+    assert not sammy.role_exists(role)
+
+
+@then("I am told the permission doesn't exist")
+def i_am_told_the_permission_doesnt_exist(sammy: SammyDriver):
+    assert sammy.permission_was_unknown()

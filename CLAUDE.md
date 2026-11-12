@@ -23,7 +23,9 @@ Python agent suite + from-scratch chat/web interface, calling models on the home
 - `libs/registry/` - `sammy.registry`: the agent registry (each agent's
   short name, name and description). Business logic, so product code like
   `libs/accounts`. It asks `sammy.accounts` who is acting and whether they're
-  allowed (`AccountService.authorize`); accounts never imports the registry.
+  allowed (`AccountService.authorize`). Accounts never imports the registry:
+  to check that a `use agent <SHORT_NAME>` names a real agent, it calls the
+  `agent_exists` function `sammy.bootstrap` gives `AccountService`.
 - `libs/bootstrap/` - `sammy.bootstrap`: how Sammy starts, whatever starts it.
   Settings from the environment and `.env` (`config.py`), the log file
   (`logs.py`), and `start(database_url)` (`startup.py`): the one database

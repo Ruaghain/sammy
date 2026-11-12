@@ -15,7 +15,8 @@ def start_accounts():
         engine = create_engine(database_url)
         engines.append(engine)
         migrate(engine)
-        return AccountService(engine)
+        # No agent registry here: no agent exists.
+        return AccountService(engine, agent_exists=lambda short_name: False)
 
     yield start
     for engine in engines:
