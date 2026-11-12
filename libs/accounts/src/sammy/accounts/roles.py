@@ -89,6 +89,16 @@ class RoleService:
             is not None
         )
 
+    def is_granted(self, database: Connection, permission: str) -> bool:
+        """Whether any role lists this permission. The admin role grants
+        everything without listing it, so it never counts."""
+        return (
+            database.execute(
+                select(role_permissions.c.role_id).where(role_permissions.c.permission == permission)
+            ).first()
+            is not None
+        )
+
     def names_of(self, database: Connection, user_id: int) -> set[str]:
         """The names of the roles this user holds."""
         return set(

@@ -29,6 +29,7 @@ from sammy.accounts import (
 from sammy.bootstrap import start
 from sammy.registry import (
     AgentDescriptionBlank,
+    AgentInUse,
     AgentNameBlank,
     AgentNameTaken,
     AgentShortNameTaken,
@@ -230,6 +231,9 @@ class SammyDriver:
     def agent_field_blank(self) -> str | None:
         """Which of an agent's details I was told can't be blank, if any."""
         return self._field_refused({AgentNameBlank: "name", AgentDescriptionBlank: "description"})
+
+    def agent_was_in_use(self) -> bool:
+        return self._was_refused(AgentInUse)
 
     def short_name_was_invalid(self) -> bool:
         return self._was_refused(InvalidShortName)
