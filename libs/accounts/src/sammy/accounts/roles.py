@@ -7,6 +7,8 @@ it's given and never opens a transaction, so the caller can combine role
 changes with others.
 """
 
+from collections.abc import Callable
+
 from sqlalchemy import Connection, delete, insert, select
 
 from sammy.accounts.tables import ADMIN_ROLE, role_permissions, roles, user_roles
@@ -15,16 +17,18 @@ MANAGE_USERS = "manage users"
 MANAGE_ROLES = "manage roles"
 VIEW_AGENTS = "view agents"
 MANAGE_AGENTS = "manage agents"
-# Talking to one agent: "use agent <name>".
+# Talking to one agent: "use agent <SHORT_NAME>", one permission per agent.
 USE_AGENT = "use agent "
 
 PERMISSIONS = frozenset({MANAGE_USERS, MANAGE_ROLES, VIEW_AGENTS, MANAGE_AGENTS})
 
 
-def is_permission(name: str) -> bool:
-    """Whether Sammy has this permission. Any "use agent <name>" is accepted
-    until the agent registry exists to say which agents there are (#137)."""
-    return name in PERMISSIONS or name.startswith(USE_AGENT)
+def is_permission(name: str, agent_exists: Callable[[str], bool]) -> bool:
+    """Whether Sammy has this permission: one of the fixed ones, or "use agent
+    <SHORT_NAME>" for an agent that exists."""
+    return name in PERMISSIONS or (
+        name.startswith(USE_AGENT) and agent_exists(name.removeprefix(USE_AGENT))
+    )
 
 
 class RoleService:

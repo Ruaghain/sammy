@@ -31,10 +31,17 @@ def start(database_url: str) -> Sammy:
     engine = create_engine(database_url)
     accounts.migrate(engine)
     registry.migrate(engine)
-    account_service = AccountService(engine)
+    # Accounts and the registry each need the other: the registry asks
+    # accounts who may do what, and accounts asks the registry which agents
+    # exist. Accounts gets a function instead of the registry itself, which
+    # also means the registry can be created after it.
+    account_service = AccountService(
+        engine, agent_exists=lambda short_name: registry_service.agent(short_name) is not None
+    )
+    registry_service = RegistryService(engine, account_service)
     return Sammy(
         engine=engine,
         accounts=account_service,
         orchestrator=Orchestrator(account_service),
-        registry=RegistryService(engine, account_service),
+        registry=registry_service,
     )

@@ -116,11 +116,6 @@ def test_a_role_that_nobody_holds_can_be_deleted():
     pass
 
 
-@then(parsers.parse('the role "{role}" doesn\'t exist'))
-def the_role_doesnt_exist(sammy: SammyDriver, role: str):
-    assert not sammy.role_exists(role)
-
-
 @then(parsers.parse('Sammy has recorded that "{actor}" deleted the role "{role}"'))
 def sammy_has_recorded_that_someone_deleted_a_role(sammy: SammyDriver, actor: str, role: str):
     assert sammy.has_recorded("role deleted", by=actor, role=role)
@@ -147,11 +142,6 @@ def the_role_still_has_no_permissions(sammy: SammyDriver, role: str):
 @scenario("role-management.feature", "A role can't be given a permission that doesn't exist")
 def test_a_role_cant_be_given_a_permission_that_doesnt_exist():
     pass
-
-
-@then("I am told the permission doesn't exist")
-def i_am_told_the_permission_doesnt_exist(sammy: SammyDriver):
-    assert sammy.permission_was_unknown()
 
 
 @scenario("role-management.feature", "The last user who can manage roles keeps that permission")

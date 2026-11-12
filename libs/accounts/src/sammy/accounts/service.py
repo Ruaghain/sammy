@@ -1,5 +1,6 @@
 import logging
 import uuid
+from collections.abc import Callable
 
 from sqlalchemy import Engine
 from sqlalchemy.exc import IntegrityError
@@ -39,11 +40,17 @@ class AccountService:
     SessionService, which work inside the transactions it opens.
     """
 
-    def __init__(self, engine: Engine):
+    def __init__(self, engine: Engine, agent_exists: Callable[[str], bool]):
         """`engine` is Sammy's database, created by whatever starts Sammy and
         shared with other packages. Its accounts tables must already be up to
-        date: run sammy.accounts.migrate(engine) first, at startup."""
+        date: run sammy.accounts.migrate(engine) first, at startup.
+
+        `agent_exists` says whether an agent with this short name is in the
+        agent registry, so a role can only be allowed to use agents that
+        exist. Whatever starts Sammy passes it in: accounts never imports the
+        registry, which depends on accounts."""
         self._engine = engine
+        self._agent_exists = agent_exists
         self._sessions = SessionService()
         self._users = UserService()
         self._roles = RoleService()
@@ -73,7 +80,7 @@ class AccountService:
             with self._engine.begin() as database:
                 acting = self._acting(database, actor)
                 self._require(database, acting, MANAGE_ROLES)
-                if not all(is_permission(permission) for permission in permissions):
+                if not all(is_permission(p, self._agent_exists) for p in permissions):
                     raise UnknownPermission
                 self._roles.create(database, name, permissions)
         except IntegrityError:
