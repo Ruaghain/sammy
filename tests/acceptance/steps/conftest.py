@@ -131,3 +131,8 @@ def a_role_that_can(sammy: SammyDriver, role: str, permissions: str):
 @then(parsers.parse('the role "{role}" allows only {permissions}'))
 def the_role_allows_only(sammy: SammyDriver, role: str, permissions: str):
     assert sammy.role_allows_only(role, permissions)
+
+
+@when(parsers.parse('I create the role "{role}" that can {permissions}'))
+def i_create_the_role(sammy: SammyDriver, role: str, permissions: str):
+    sammy.create_role(role, permissions)

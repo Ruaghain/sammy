@@ -84,6 +84,11 @@ def test_an_agent_cant_be_renamed_to_a_name_another_agent_has():
     pass
 
 
+@scenario("agent-registry.feature", "A role can be allowed to use an agent that exists")
+def test_a_role_can_be_allowed_to_use_an_agent_that_exists():
+    pass
+
+
 @given(
     parsers.re(
         r'an agent "(?P<short_name>[^"]*)" called "(?P<name>[^"]*)", '
