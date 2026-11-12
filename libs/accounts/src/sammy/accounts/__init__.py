@@ -17,7 +17,7 @@ from sammy.accounts.errors import (
     UnknownRole,
     UsernameTaken,
 )
-from sammy.accounts.roles import MANAGE_AGENTS
+from sammy.accounts.roles import MANAGE_AGENTS, USE_AGENT
 from sammy.accounts.schema import migrate
 from sammy.accounts.service import AccountService
 from sammy.accounts.sessions import Session
@@ -38,6 +38,7 @@ __all__ = [
     "SetupAlreadyDone",
     "UnknownPermission",
     "UnknownRole",
+    "USE_AGENT",
     "UsernameTaken",
     "migrate",
 ]

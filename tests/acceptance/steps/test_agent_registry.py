@@ -99,6 +99,11 @@ def test_an_agent_can_be_removed():
     pass
 
 
+@scenario("agent-registry.feature", "An agent that a role allows can't be removed")
+def test_an_agent_that_a_role_allows_cant_be_removed():
+    pass
+
+
 @given(
     parsers.re(
         r'an agent "(?P<short_name>[^"]*)" called "(?P<name>[^"]*)", '
@@ -202,3 +207,8 @@ def i_am_told_the_agents_field_cant_be_blank(sammy: SammyDriver, field: str):
 @then(parsers.parse('the agent "{short_name}" doesn\'t exist'))
 def the_agent_doesnt_exist(sammy: SammyDriver, short_name: str):
     assert sammy.agent(short_name) is None
+
+
+@then("I am told the agent is still in use")
+def i_am_told_the_agent_is_still_in_use(sammy: SammyDriver):
+    assert sammy.agent_was_in_use()

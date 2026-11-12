@@ -159,6 +159,12 @@ class AccountService:
             role_id = self._roles.find_id(database, role)
             return self._roles.permissions(database, role_id) if role_id is not None else set()
 
+    def any_role_allows(self, permission: str) -> bool:
+        """Whether any role allows this permission, other than the admin role,
+        which allows everything."""
+        with self._engine.connect() as database:
+            return self._roles.is_granted(database, permission)
+
     def role_exists(self, role: str) -> bool:
         """Whether a role with this name exists."""
         with self._engine.connect() as database:

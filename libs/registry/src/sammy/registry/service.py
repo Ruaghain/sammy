@@ -1,11 +1,12 @@
 from sqlalchemy import Engine
 from sqlalchemy.exc import IntegrityError
 
-from sammy.accounts import MANAGE_AGENTS, AccountService, Session
+from sammy.accounts import MANAGE_AGENTS, USE_AGENT, AccountService, Session
 from sammy.core import AuditLog
 from sammy.registry.agents import Agent, AgentService, is_short_name
 from sammy.registry.errors import (
     AgentDescriptionBlank,
+    AgentInUse,
     AgentNameBlank,
     AgentNameTaken,
     AgentShortNameTaken,
@@ -85,8 +86,12 @@ class RegistryService:
 
     def remove_agent_as(self, actor: Session | None, short_name: str) -> None:
         """Removes an agent on behalf of whoever holds `actor`, and records
-        who did it."""
+        who did it. Refused while any role allows using it: a new agent added
+        later with the same short name would otherwise quietly be usable by
+        that role."""
         acting = self._accounts.authorize(actor, MANAGE_AGENTS)
+        if self._accounts.any_role_allows(USE_AGENT + short_name):
+            raise AgentInUse
         with self._engine.begin() as database:
             self._agents.remove(database, short_name)
         _audit.record("agent removed", actor_public_id=acting, agent=short_name)

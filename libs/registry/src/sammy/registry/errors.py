@@ -28,3 +28,9 @@ class AgentNameBlank(RegistryError):
 class AgentDescriptionBlank(RegistryError):
     """Raised when an agent would be given a blank description: empty, or
     only spaces. The orchestrator chooses agents by their descriptions."""
+
+
+class AgentInUse(RegistryError):
+    """Raised when removing an agent that a role still allows using. A new
+    agent added later with the same short name would otherwise quietly be
+    usable by that role."""
